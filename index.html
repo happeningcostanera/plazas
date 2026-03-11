@@ -90,7 +90,7 @@
     .ss-cfg-name.off{color:var(--text3);text-decoration:line-through}
     .add-ss-row{display:flex;gap:6px;margin-top:8px;padding-left:12px}
     /* HISTORIAL */
-    .hist-header{display:grid;grid-template-columns:48px 72px 1fr 1fr 1fr;gap:6px;padding:5px 10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);margin-bottom:4px}
+    .hist-header{display:grid;grid-template-columns:44px 60px 1fr 1fr 1fr 36px;gap:6px;padding:5px 10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);margin-bottom:4px}
     .hist-row{display:grid;grid-template-columns:48px 72px 1fr 1fr 1fr;gap:6px;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);align-items:center}
     .hist-hora{font-family:monospace;color:var(--text2);font-size:11px}
     /* CHIPS */
@@ -119,6 +119,18 @@
     #loader{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px}
     .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
+
+    .resumen-table{width:100%;border-collapse:collapse;font-size:12px}
+    .resumen-table th{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;text-align:center;border-bottom:1px solid var(--border2);white-space:nowrap}
+    .resumen-table th:first-child{text-align:left}
+    .resumen-table td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:center}
+    .resumen-table td:first-child{text-align:left;color:var(--text);font-weight:500}
+    .resumen-table tr:last-child td{border-bottom:none}
+    .resumen-count{display:inline-block;min-width:22px;font-weight:600;color:var(--gold2)}
+    .resumen-count.zero{color:var(--text3);font-weight:400}
+    .hist-count-badge{display:inline-block;background:rgba(201,147,58,.15);border:1px solid var(--border2);color:var(--gold2);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600;text-align:center}
+    select{appearance:none}
+
 
 
     #ultima-rotacion:not([style*="none"]) + #sectores-grid .sector-table {
@@ -198,7 +210,7 @@
     <div id="tab-operacion" class="tab-content active">
       <div id="stats">
         <div class="stat"><div class="stat-num" id="st-mozos">0</div><div class="stat-label">Mozos activos</div></div>
-        <div class="stat"><div class="stat-num" id="st-slots">0</div><div class="stat-label">Slots activos</div></div>
+        <div class="stat"><div class="stat-num" id="st-slots">0</div><div class="stat-label">Sub sectores</div></div>
         <div class="stat"><div class="stat-num" id="st-asig">0</div><div class="stat-label">Asignados</div></div>
         <div class="stat"><div class="stat-num" id="st-libres">0</div><div class="stat-label">Sin asignar</div></div>
       </div>
@@ -254,17 +266,41 @@
 
     <!-- HISTORIAL -->
     <div id="tab-historial" class="tab-content">
+
+
+      <!-- VISTA RESUMEN -->
       <div class="section">
+        <div class="section-title">📊 Resumen por mozo</div>
+        <div id="resumen-empty" class="empty" style="display:none">No hay datos aún.</div>
+        <div id="resumen-table" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="section">
+        <div class="section-title">🔍 Filtros</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <select id="filtro-mozo" onchange="window.renderHistorial && window.renderHistorial()" style="flex:1;min-width:130px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+            <option value="">Todos los mozos</option>
+          </select>
+          <input type="date" id="filtro-fecha" onchange="window.renderHistorial && window.renderHistorial()" style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;color-scheme:dark"/>
+          <button class="btn btn-ghost" onclick="limpiarFiltros()">✕ Limpiar</button>
+        </div>
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="section-title" style="margin:0;border:none;padding:0">Registros</div>
-          <button class="btn btn-red" onclick="limpiarHistorial()">Limpiar</button>
+          <span id="hist-count" style="font-size:11px;color:var(--text3)"></span>
+          <button class="btn btn-red" onclick="limpiarHistorial()">Limpiar historial</button>
         </div>
       </div>
-      <div id="hist-empty" class="empty" style="display:none">No hay registros aún.</div>
-      <div id="hist-table" style="display:none">
-        <div class="hist-header" style="grid-template-columns:48px 72px 1fr 1fr 1fr"><span>Hora</span><span>Fecha</span><span>Mozo</span><span>Sector</span><span>Sub sector</span></div>
-        <div id="hist-rows"></div>
+
+      <!-- VISTA REGISTROS -->
+      <div class="section">
+        <div class="section-title">📋 Registros</div>
+        <div id="hist-empty" class="empty" style="display:none">No hay registros aún.</div>
+        <div id="hist-table" style="display:none">
+          <div class="hist-header" style="grid-template-columns:44px 60px 1fr 1fr 1fr 36px"><span>Hora</span><span>Fecha</span><span>Mozo</span><span>Sector</span><span>Sub sector</span><span title="Veces">#</span></div>
+          <div id="hist-rows"></div>
+        </div>
       </div>
+
     </div>
 
   </div>
@@ -313,7 +349,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
     getFirestore, collection, doc, onSnapshot,
-    setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs
+    setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs, getDoc
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -331,7 +367,6 @@
   let mozos=[], sectores=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let popupSlotId=null, restMozoId=null, editCtx=null;
   let pendingHistorial=[], mozoRotIdx=0;
-  const MEMORIA=4;
 
   const mozosCol    = collection(db,"mozos");
   const sectoresCol = collection(db,"sectores");
@@ -341,8 +376,9 @@
   onSnapshot(mozosCol, snap => { mozos=snap.docs.map(d=>({id:d.id,...d.data()})); renderAll(); });
   onSnapshot(query(sectoresCol,orderBy("orden","asc")), snap => { sectores=snap.docs.map(d=>({id:d.id,...d.data()})); renderAll(); });
   onSnapshot(asigCol, snap => { asignaciones={}; snap.docs.forEach(d=>{asignaciones[d.id]=d.data();}); renderAll(); });
-  onSnapshot(query(histCol,orderBy("ts","desc"),limit(80)), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); });
+  onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); });
   onSnapshot(doc(db,"meta","ultimaRotacion"), snap => { ultimaRotacionTs=snap.exists()?snap.data().ts:null; renderUltimaRotacion(); });
+  onSnapshot(doc(db,"meta","rotacion"), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
 
   window.addEventListener("online",  ()=>setConn(true));
   window.addEventListener("offline", ()=>setConn(false));
@@ -378,11 +414,12 @@
   }
 
   function getSlots() {
+    // Solo subsectores activos dentro de sectores activos
+    // Sectores sin subsectores activos no participan en la rotación
     const slots=[];
     sectores.filter(s=>s.disponible).forEach(s=>{
       const subs=(s.subsectores||[]).filter(ss=>ss.disponible);
-      if(subs.length>0) subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss.nombre}));
-      else slots.push({slotId:s.id,sectorId:s.id,ssId:null,sectorNombre:s.nombre,ssNombre:null});
+      subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss.nombre}));
     });
     return slots;
   }
@@ -553,6 +590,7 @@
           <span class="sector-cfg-name ${s.disponible?"":"off"}">${s.nombre}</span>
           ${s.descripcion?`<span style="font-size:10px;color:var(--text3);flex:1;font-style:italic">${s.descripcion}</span>`:""}
           <button class="btn btn-ghost" onclick="abrirEdicion('sector','${s.id}')">✏️</button>
+          <button class="btn ${s.evitarRepetirSector?"btn-orange":"btn-ghost"}" onclick="toggleEvitarRepetir('${s.id}',${!s.evitarRepetirSector})" title="Evitar repetir sector completo en ciclo siguiente">${s.evitarRepetirSector?"🔒 No repetir sector":"🔓 Permitir repetir"}</button>
           <button class="btn ${s.disponible?"btn-gold":"btn-green"}" onclick="toggleSector('${s.id}',${!s.disponible})">${s.disponible?"Desact.":"Activ."}</button>
           <button class="btn btn-red" onclick="eliminarSector('${s.id}')">✕</button>
         </div>
@@ -566,17 +604,131 @@
   }
 
   function renderHistorial() {
-    const empty=document.getElementById("hist-empty");
-    const table=document.getElementById("hist-table");
-    if(historial.length===0){empty.style.display="block";table.style.display="none";return;}
-    empty.style.display="none";table.style.display="block";
-    document.getElementById("hist-rows").innerHTML=historial.map(h=>{
-      const d=h.ts?new Date(h.ts):null;
-      const hora=d?d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}):"--:--";
-      const fecha=d?d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"}):"";
-      return `<div class="hist-row"><span class="hist-hora">${hora}</span><span style="font-size:11px;color:var(--text3)">${fecha}</span><span>${h.mozo||""}</span><span style="color:var(--gold2)">${h.sector||""}</span><span style="color:var(--text2)">${h.subsector||""}</span></div>`;
-    }).join("");
+    // Leer filtros ANTES de tocar el DOM del selector
+    const filtroMozo  = document.getElementById("filtro-mozo")?.value || "";
+    const filtroFecha = document.getElementById("filtro-fecha")?.value || "";
+
+    // Actualizar opciones del selector sin destruir la selección actual
+    const sel = document.getElementById("filtro-mozo");
+    if (sel) {
+      const nombres = [...new Set(historial.map(h=>h.mozo).filter(Boolean))].sort();
+      // Solo reconstruir si cambió la lista de mozos
+      const optsActuales = [...sel.options].map(o=>o.value).filter(Boolean).join(",");
+      const optsNuevas = nombres.join(",");
+      if (optsActuales !== optsNuevas) {
+        sel.innerHTML = `<option value="">Todos los mozos</option>` + nombres.map(n=>`<option value="${n}">${n}</option>`).join("");
+        if (filtroMozo) sel.value = filtroMozo;
+      }
+    }
+
+    let filtrado = historial;
+    if (filtroMozo)  filtrado = filtrado.filter(h => h.mozo === filtroMozo);
+    if (filtroFecha) filtrado = filtrado.filter(h => {
+      if (!h.ts) return false;
+      const d = new Date(h.ts);
+      const ymd = d.getFullYear()+"-"+(d.getMonth()+1).toString().padStart(2,"0")+"-"+d.getDate().toString().padStart(2,"0");
+      return ymd === filtroFecha;
+    });
+
+    const empty = document.getElementById("hist-empty");
+    const table = document.getElementById("hist-table");
+    const countEl = document.getElementById("hist-count");
+
+    if (filtrado.length === 0) {
+      empty.style.display="block"; table.style.display="none";
+      if (countEl) countEl.textContent = historial.length===0 ? "" : "Sin resultados para este filtro";
+    } else {
+      empty.style.display="none"; table.style.display="block";
+      if (countEl) countEl.textContent = `${filtrado.length} registro${filtrado.length>1?"s":""}${filtroMozo||filtroFecha?" (filtrado)":""}`;
+
+      // Calcular contador acumulado: cuántas veces este mozo estuvo en este slot (en TODO el historial)
+      document.getElementById("hist-rows").innerHTML = filtrado.map(h => {
+        const d = h.ts ? new Date(h.ts) : null;
+        const hora  = d ? d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}) : "--:--";
+        const fecha = d ? d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"}) : "";
+        const slotLabel = h.subsector || h.sector || "";
+        const count = historial.filter(x => x.mozo===h.mozo && (x.subsector||x.sector)===slotLabel).length;
+        return `<div class="hist-row">
+          <span class="hist-hora">${hora}</span>
+          <span style="font-size:11px;color:var(--text3)">${fecha}</span>
+          <span>${h.mozo||""}</span>
+          <span style="color:var(--gold2)">${h.sector||""}</span>
+          <span style="color:var(--text2)">${h.subsector||""}</span>
+          <span class="hist-count-badge" title="${h.mozo} estuvo ${count}x en ${slotLabel}">${count}</span>
+        </div>`;
+      }).join("");
+    }
+
+    renderResumen(filtroMozo, filtroFecha);
   }
+
+  function renderResumen(filtroMozo, filtroFecha) {
+    const resumenEmpty = document.getElementById("resumen-empty");
+    const resumenTable = document.getElementById("resumen-table");
+    if (historial.length === 0) { resumenEmpty.style.display="block"; resumenTable.innerHTML=""; return; }
+    resumenEmpty.style.display="none";
+
+    // Filtrar por fecha y/o mozo
+    let base = historial;
+    if (filtroFecha) base = base.filter(h => {
+      if (!h.ts) return false;
+      const d = new Date(h.ts);
+      const ymd = d.getFullYear()+"-"+(d.getMonth()+1).toString().padStart(2,"0")+"-"+d.getDate().toString().padStart(2,"0");
+      return ymd === filtroFecha;
+    });
+    if (filtroMozo) base = base.filter(h => h.mozo === filtroMozo);
+
+    // Obtener mozos únicos
+    const mozosU = [...new Set(base.map(h=>h.mozo).filter(Boolean))].sort();
+    if (mozosU.length === 0) { resumenTable.innerHTML=`<div class="empty">Sin datos para este filtro.</div>`; return; }
+
+    // Construir labels de columna: "Sector › SubSector" para evitar ambigüedad
+    // Usar Set con label completo como clave única
+    const slotLabels = [...new Set(base.map(h => {
+      if(h.subsector) return h.sector+" › "+h.subsector;
+      return h.sector||"";
+    }).filter(Boolean))];
+
+    // Ordenar por sector primero, luego subsector
+    slotLabels.sort();
+
+    // Construir tabla
+    let html = `<table class="resumen-table"><thead><tr><th>Mozo</th>`;
+    slotLabels.forEach(lbl => {
+      // Mostrar en dos líneas: sector arriba, subsector abajo
+      const parts = lbl.split(" › ");
+      const display = parts.length>1
+        ? `<span style="font-size:9px;color:var(--text3);display:block">${parts[0]}</span>${parts[1]}`
+        : lbl;
+      html += `<th style="min-width:52px">${display}</th>`;
+    });
+    html += `<th>Total</th></tr></thead><tbody>`;
+
+    mozosU.forEach(mozo => {
+      const filas = base.filter(h => h.mozo === mozo);
+      const total = filas.length;
+      html += `<tr><td>${mozo}</td>`;
+      slotLabels.forEach(lbl => {
+        const n = filas.filter(h => {
+          const hl = h.subsector ? h.sector+" › "+h.subsector : (h.sector||"");
+          return hl === lbl;
+        }).length;
+        html += `<td><span class="resumen-count ${n===0?"zero":""}">${n||"—"}</span></td>`;
+      });
+      html += `<td><strong style="color:var(--gold2)">${total}</strong></td></tr>`;
+    });
+    html += `</tbody></table>`;
+    resumenTable.innerHTML = html;
+  }
+
+  window.renderHistorial = renderHistorial;
+  window.limpiarFiltros = function() {
+    const sel = document.getElementById("filtro-mozo");
+    const fecha = document.getElementById("filtro-fecha");
+    if (sel) sel.value = "";
+    if (fecha) fecha.value = "";
+    renderHistorial();
+  };
 
   // ===================== ROTACION =====================
   function renderAvisoRotacion() {
@@ -590,24 +742,24 @@
     const asigCount=Object.keys(asignaciones).length;
     if(asigCount>0&&asigCount>=p&&p>0){
       aviso.style.display="block";hint.style.display="none";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Todos los slots están ocupados</strong>Liberá antes de volver a rotar.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Todos los sub sectores están ocupados</strong>Liberá antes de volver a rotar.</div>`;
       btn.disabled=true;btn.style.opacity=".4";return;
     }
     if(m===0||p===0){
       aviso.style.display="block";hint.style.display="none";
-      aviso.innerHTML=`<div class="aviso error"><strong>⛔ Sin mozos o slots activos</strong>Activá mozos en Personal y sectores en Sectores.</div>`;
+      aviso.innerHTML=`<div class="aviso error"><strong>⛔ Sin mozos o sub sectores activos</strong>Activá mozos en Personal y sub sectores en Sectores.</div>`;
       btn.disabled=true;btn.style.opacity=".4";return;
     }
     hint.style.display="block";aviso.style.display="block";
     if(m===p){
       btn.disabled=false;btn.style.opacity="1";
-      aviso.innerHTML=`<div class="aviso info"><strong>✅ Configuración ideal</strong>${m} mozo${m>1?"s":""} para ${p} slot${p>1?"s":""}.</div>`;
+      aviso.innerHTML=`<div class="aviso info"><strong>✅ Listo para rotar</strong>${m} mozo${m>1?"s":""} · ${p} sub sector${p>1?"es":""}.</div>`;
     } else if(m<p){
       btn.disabled=true;btn.style.opacity=".4";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Menos mozos que slots</strong>${m} mozo${m>1?"s":""} para ${p} slots.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Menos mozos que sub sectores activos</strong>${m} mozo${m>1?"s":""} para ${p} sub sectores. Ajustá en Personal o Sectores.</div>`;
     } else {
       btn.disabled=true;btn.style.opacity=".4";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Más mozos que slots</strong>${m} mozos para ${p} slot${p>1?"s":""}.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Más mozos que sub sectores activos</strong>${m} mozos para ${p} sub sectores. Ajustá en Personal o Sectores.</div>`;
     }
   }
 
@@ -616,42 +768,88 @@
     const slots=getSlots();
     if(mDisp.length===0||slots.length===0||mDisp.length!==slots.length) return;
     const ahora=Date.now();
-    const histPorMozo={};
-    mDisp.forEach(m=>{histPorMozo[m.id]=[];});
+    const n=mDisp.length;
+
+    // Leer índice circular desde Firestore
+    const idxSnap=await getDoc(doc(db,"meta","rotacion"));
+    const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
+
+    // Calcular cuántas veces cada mozo estuvo en cada slot (historial completo)
+    // Usamos slotId como clave única para evitar confusión entre subsectores con mismo nombre
+    const conteo={};
+    mDisp.forEach(m=>{ conteo[m.id]={}; slots.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
     for(const h of historial){
       const mozo=mDisp.find(m=>m.nombre===h.mozo);
-      if(!mozo||!histPorMozo[mozo.id]) continue;
-      if(histPorMozo[mozo.id].length<MEMORIA) histPorMozo[mozo.id].push(h.subsector||h.sector);
+      if(!mozo) continue;
+      // Buscar el slotId que corresponde a este registro del historial
+      const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
+                           ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
+      if(sl&&conteo[mozo.id]) conteo[mozo.id][sl.slotId]=(conteo[mozo.id][sl.slotId]||0)+1;
     }
-    const asignados=new Set(), resultado=[], advertencias=[];
+
+    const resultado=[], advertencias=[];
+    const mozosUsados=new Set();
+
     for(let pi=0;pi<slots.length;pi++){
       const slot=slots[pi];
+      // Sectores con regla "evitar repetir sector"
+      const sectoresEvitar=sectores.filter(s=>s.evitarRepetirSector).map(s=>s.id);
+      const nSlots=slots.length;
+
+      // ¿Estuvo este mozo en este sector en la última rotación completa?
+      const estuvoEnSectorReciente=(mozoId,sectorId)=>{
+        if(!sectoresEvitar.includes(sectorId)) return false;
+        let count=0;
+        for(const h of historial){
+          const mo=mDisp.find(m=>m.nombre===h.mozo);
+          if(!mo||mo.id!==mozoId) continue;
+          count++;
+          if(count>nSlots) break;
+          const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector);
+          if(sl&&sl.sectorId===sectorId) return true;
+        }
+        return false;
+      };
+
+      // Construir candidatos: excluir usados y restringidos
+      // Ordenar: 1) sin penalización de sector, 2) menos veces en este slot, 3) orden circular
       const candidatos=[];
-      for(let mi=0;mi<mDisp.length;mi++){
-        const mozo=mDisp[(mozoRotIdx+pi+mi)%mDisp.length];
-        if(asignados.has(mozo.id)) continue;
+      for(let mi=0;mi<n;mi++){
+        const circularPos=(idx+pi+mi)%n;
+        const mozo=mDisp[circularPos];
+        if(mozosUsados.has(mozo.id)) continue;
         if((mozo.restricciones||[]).includes(slot.slotId)) continue;
-        candidatos.push(mozo);
+        const penSector=estuvoEnSectorReciente(mozo.id,slot.sectorId)?1:0;
+        candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),penSector,circularPos:mi});
       }
-      if(candidatos.length===0){advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo`);continue;}
-      const label=slot.ssNombre||slot.sectorNombre;
-      const frescos=candidatos.filter(m=>!(histPorMozo[m.id]||[]).includes(label));
-      const elegido=frescos.length>0?frescos[0]:candidatos[0];
-      if(frescos.length===0) advertencias.push(`⚠️ ${elegido.nombre} → ${label} (repetición inevitable)`);
-      resultado.push({slotId:slot.slotId,mozoId:elegido.id,slot,forzado:frescos.length===0});
-      asignados.add(elegido.id);
+      if(candidatos.length===0){
+        advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
+        continue;
+      }
+      candidatos.sort((a,b)=>a.penSector-b.penSector||a.veces-b.veces||a.circularPos-b.circularPos);
+      const elegido=candidatos[0].mozo;
+      resultado.push({slotId:slot.slotId,mozoId:elegido.id,slot});
+      mozosUsados.add(elegido.id);
     }
-    if(advertencias.length>0&&resultado.length===0){alert("⛔ No se pudo rotar:\\n\\n"+advertencias.join("\\n"));return;}
+
+    if(resultado.length===0){
+      alert("⛔ No se pudo rotar:\n\n"+advertencias.join("\n"));
+      return;
+    }
+
+    const nuevoIdx=(idx+1)%n;
     const batch=writeBatch(db);
     resultado.forEach(({slotId,mozoId})=>batch.set(doc(asigCol,slotId),{mozoId,desde:ahora}));
+    batch.set(doc(db,"meta","rotacion"),{idx:nuevoIdx},{merge:true});
     await batch.commit();
-    pendingHistorial=resultado.map(({mozoId,slot,forzado},i)=>{
+
+    mozoRotIdx=nuevoIdx;
+    pendingHistorial=resultado.map(({mozoId,slot},i)=>{
       const mozo=mozos.find(m=>m.id===mozoId);
-      return {mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora-i,forzado};
+      return {mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora-i};
     });
-    mozoRotIdx=(mozoRotIdx+slots.length)%mDisp.length;
     document.getElementById("btn-confirmar").style.display="block";
-    if(advertencias.length>0) setTimeout(()=>alert("Rotación con advertencias:\\n\\n"+advertencias.join("\\n")),300);
+    if(advertencias.length>0) setTimeout(()=>alert("Rotación con advertencias:\n\n"+advertencias.join("\n")),300);
   };
 
   window.confirmarRotacion = async function() {
@@ -796,22 +994,34 @@
     await addDoc(sectoresCol,{nombre,disponible:true,subsectores:[],orden:maxOrden});
     inp.value="";
   };
+
+  window.toggleEvitarRepetir = async function(sectorId, val) {
+    await setDoc(doc(sectoresCol, sectorId), { evitarRepetirSector: val }, { merge: true });
+  };
+
   window.toggleSector = async function(id,disp) {
     await setDoc(doc(sectoresCol,id),{disponible:disp},{merge:true});
     if(!disp){
+      // Liberar todos los subsectores de este sector
+      const s=sectores.find(s=>s.id===id);
+      const subs=(s?.subsectores||[]);
       const batch=writeBatch(db);
-      getSlots().filter(sl=>sl.sectorId===id).forEach(sl=>batch.delete(doc(asigCol,sl.slotId)));
-      batch.delete(doc(asigCol,id));
+      subs.forEach(ss=>batch.delete(doc(asigCol,id+"___"+ss.id)));
       await batch.commit();
     }
   };
   window.eliminarSector = async function(id) {
     if(!confirm("¿Eliminar este sector y todos sus sub sectores?")) return;
+    const s=sectores.find(s=>s.id===id);
+    const subs=(s?.subsectores||[]);
     const batch=writeBatch(db);
     batch.delete(doc(sectoresCol,id));
-    getSlots().filter(sl=>sl.sectorId===id).forEach(sl=>batch.delete(doc(asigCol,sl.slotId)));
-    batch.delete(doc(asigCol,id));
-    mozos.forEach(m=>{const rests=(m.restricciones||[]).filter(r=>!r.startsWith(id));if(rests.length!==(m.restricciones||[]).length)batch.set(doc(mozosCol,m.id),{restricciones:rests},{merge:true});});
+    subs.forEach(ss=>batch.delete(doc(asigCol,id+"___"+ss.id)));
+    // Limpiar restricciones de mozos
+    mozos.forEach(m=>{
+      const rests=(m.restricciones||[]).filter(r=>!r.startsWith(id+"___"));
+      if(rests.length!==(m.restricciones||[]).length) batch.set(doc(mozosCol,m.id),{restricciones:rests},{merge:true});
+    });
     await batch.commit();
   };
   window.agregarSubsector = async function(sectorId) {
