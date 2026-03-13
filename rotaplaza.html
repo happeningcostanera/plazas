@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#1a1008" />
+  <title>Sistemalf Plaza</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="rotaplaza.css" />
+  <link rel="icon" type="image/png" href="img/FaviconH55.png" />
+</head>
+<body>
+<div id="loader"><div class="spinner"></div><div style="color:var(--text3);font-size:13px">Conectando con Firebase...</div></div>
+
+<div id="app" style="display:none">
+  <div id="header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:1px;height:36px;background:var(--border2)"></div>
+      <img src="img/LogoH55.png" alt="Sistemalf Plaza" style="height:32px;width:auto;display:block" />
+      <div><h1>Sistemalf Plaza</h1><small>Rotación de mozos</small></div>
+    </div>
+    <span id="conn-status" class="online">● en línea</span>
+  </div>
+
+  <div id="tabs">
+    <button class="tab-btn active" onclick="switchTab('operacion',this)">⚡ Operación</button>
+    <button class="tab-btn"        onclick="switchTab('personal',this)">👥 Personal</button>
+    <button class="tab-btn"        onclick="switchTab('sectores',this)">🗺️ Sectores</button>
+    <button class="tab-btn"        onclick="switchTab('historial',this)">📋 Historial</button>
+    <button class="tab-btn"        onclick="switchTab('barra',this)">🍸 Barra</button>
+  </div>
+
+  <div id="main">
+
+    <!-- OPERACION -->
+    <div id="tab-operacion" class="tab-content active">
+      <div id="stats">
+        <div class="stat"><div class="stat-num" id="st-mozos">0</div><div class="stat-label">Mozos activos</div></div>
+        <div class="stat"><div class="stat-num" id="st-slots">0</div><div class="stat-label">Sub sectores</div></div>
+        <div class="stat"><div class="stat-num" id="st-asig">0</div><div class="stat-label">Asignados</div></div>
+        <div class="stat"><div class="stat-num" id="st-libres">0</div><div class="stat-label">Sin asignar</div></div>
+      </div>
+      <div id="aviso-global"></div>
+      <div class="section">
+        <div class="section-title">🔄 Rotación automática</div>
+        <div id="rotar-aviso" style="display:none;margin-bottom:12px"></div>
+        <button class="btn-rotar" id="btn-rotar" onclick="rotarAutomatico()">⚡ ROTAR AHORA</button>
+        <button id="btn-confirmar" onclick="confirmarRotacion()" style="display:none;width:100%;padding:12px;border-radius:10px;border:1px solid var(--green);background:rgba(74,143,58,.15);color:var(--green2);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">✅ Confirmar rotación</button>
+        <button id="btn-pdf" onclick="generarPDF()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid var(--gold);background:rgba(201,147,58,.12);color:var(--gold2);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">📄 Descargar PDF</button>
+        <button id="btn-presentacion" onclick="abrirPresentacion()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid #5a8fa0;background:rgba(60,120,150,.15);color:#90cfe0;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px">📺 Ver en pantalla</button>
+        <p id="rotar-hint" style="font-size:11px;color:var(--text3);text-align:center">Asigna mozos a todos los slots activos — confirmá cuando estés conforme</p>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          <span>🗺️ Estado de sectores</span>
+          <button id="btn-liberar-todo" onclick="liberarTodo()" style="display:none" class="btn btn-red">🔓 Liberar todo</button>
+        </div>
+        <div id="ultima-rotacion" style="display:none;margin-bottom:10px"></div>
+        <div id="sectores-grid"></div>
+      </div>
+      <div class="section" id="libres-section" style="display:none">
+        <div class="section-title">👤 Sin asignar</div>
+        <div class="chips" id="libres-list"></div>
+      </div>
+      <div class="section" id="barra-op-section" style="display:none">
+        <div class="section-title">🍸 Barra</div>
+        <div id="barra-op-grid-op"></div>
+      </div>
+      <div class="section" id="barra-libres-section" style="display:none">
+        <div class="section-title">🍸 Sin asignar en barra</div>
+        <div class="chips" id="barra-libres-list"></div>
+      </div>
+    </div>
+
+    <!-- BARRA -->
+    <div id="tab-barra" class="tab-content">
+      <!-- Operación barra -->
+      <div class="section">
+        <div class="section-title">🍸 Asignación</div>
+        <div id="barra-op-grid"></div>
+      </div>
+      <!-- Config sectores de barra -->
+      <div class="section">
+        <div class="section-title">Sectores de barra</div>
+        <div class="input-row">
+          <input type="text" id="nuevo-sector-bar" placeholder="Nombre del sector de barra"/>
+          <button class="btn btn-gold" onclick="agregarSectorBar()">+ Agregar</button>
+        </div>
+        <div id="sectores-bar-config"></div>
+      </div>
+    </div>
+
+    <!-- PERSONAL -->
+    <div id="tab-personal" class="tab-content">
+      <div class="section">
+        <div class="section-title">Agregar mozo</div>
+        <div class="input-row">
+          <input type="text" id="nuevo-mozo" placeholder="Nombre del mozo"/>
+          <button class="btn btn-gold" onclick="agregarMozo()">+ Agregar</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Mozos</div>
+        <div id="mozos-list"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🍸 Mozos de Barra</div>
+        <div class="input-row" style="margin-bottom:10px">
+          <input type="text" id="nuevo-mozo-bar" placeholder="Nombre del mozo de barra"/>
+          <button class="btn btn-gold" onclick="agregarMozoBar()">+ Agregar</button>
+        </div>
+        <div id="mozos-bar-list"></div>
+      </div>
+    </div>
+
+    <!-- SECTORES -->
+    <div id="tab-sectores" class="tab-content">
+      <div class="section">
+        <div class="section-title">Agregar sector</div>
+        <div class="input-row">
+          <input type="text" id="nuevo-sector" placeholder="Nombre del sector"/>
+          <button class="btn btn-gold" onclick="agregarSector()">+ Agregar</button>
+        </div>
+      </div>
+      <div id="sectores-config"></div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div id="tab-historial" class="tab-content">
+
+
+      <!-- VISTA RESUMEN -->
+      <div class="section">
+        <div class="section-title">📊 Resumen por mozo</div>
+        <div id="resumen-empty" class="empty" style="display:none">No hay datos aún.</div>
+        <div id="resumen-table" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="section">
+        <div class="section-title">🔍 Filtros</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <select id="filtro-mozo" onchange="window.renderHistorial && window.renderHistorial()" style="flex:1;min-width:130px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+            <option value="">Todos los mozos</option>
+          </select>
+          <input type="date" id="filtro-fecha" onchange="window.renderHistorial && window.renderHistorial()" style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;color-scheme:dark"/>
+          <button class="btn btn-ghost" onclick="limpiarFiltros()">✕ Limpiar</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span id="hist-count" style="font-size:11px;color:var(--text3)"></span>
+          <button class="btn btn-red" onclick="limpiarHistorial()">Limpiar historial</button>
+        </div>
+      </div>
+
+      <!-- VISTA REGISTROS -->
+      <div class="section">
+        <div class="section-title">📋 Registros</div>
+        <div id="hist-empty" class="empty" style="display:none">No hay registros aún.</div>
+        <div id="hist-table" style="display:none">
+          <div class="hist-header" style="grid-template-columns:44px 60px 1fr 1fr 1fr 36px"><span>Hora</span><span>Fecha</span><span>Mozo</span><span>Sector</span><span>Sub sector</span><span title="Veces">#</span></div>
+          <div id="hist-rows"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- POPUP ASIGNACION -->
+<div id="popup-overlay" class="overlay" onclick="cerrarPopup()">
+  <div class="popup-box" onclick="event.stopPropagation()">
+    <div class="popup-title" id="popup-title">Asignar mozo</div>
+    <div class="popup-sub" id="popup-sub"></div>
+    <div id="popup-opciones"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="cerrarPopup()">Cancelar</button>
+  </div>
+</div>
+
+<!-- POPUP EDICION -->
+<div id="edit-overlay" class="overlay" onclick="cerrarEdicion()">
+  <div class="popup-box" onclick="event.stopPropagation()">
+    <div class="popup-title" id="edit-title">Editar</div>
+    <div style="margin:14px 0 8px">
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">NOMBRE</label>
+      <input type="text" id="edit-nombre" style="width:100%"/>
+    </div>
+    <div id="edit-desc-row" style="margin-bottom:14px;display:none">
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">DESCRIPCIÓN</label>
+      <textarea id="edit-desc" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-gold"    style="flex:1" onclick="guardarEdicion()">Guardar</button>
+      <button class="btn btn-outline" style="flex:1" onclick="cerrarEdicion()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP RESTRICCIONES -->
+<div id="rest-overlay" class="overlay" onclick="cerrarRestricciones()">
+  <div class="popup-box" onclick="event.stopPropagation()">
+    <div class="popup-title" id="rest-title">Restricciones</div>
+    <div class="popup-sub">Slots donde este mozo NO puede ir</div>
+    <div id="rest-opciones"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="cerrarRestricciones()">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODO PRESENTACION -->
+<div id="presentacion-overlay" style="display:none;position:fixed;inset:0;background:#0f0b06;z-index:200;overflow-y:auto">
+  <div style="max-width:900px;margin:0 auto;padding:24px 16px 80px">
+    <div id="pres-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div id="pres-titulo" style="font-size:22px;font-weight:700;color:#e8b866"></div>
+        <div id="pres-fecha" style="font-size:13px;color:#7a5a30;margin-top:2px"></div>
+      </div>
+      <img src="img/LogoH55.png" style="height:36px;opacity:.7"/>
+    </div>
+    <div id="pres-grid"></div>
+  </div>
+  <button onclick="cerrarPresentacion()" style="position:fixed;bottom:20px;right:20px;background:rgba(15,11,6,.9);border:1px solid #3a2a12;color:#7a5a30;font-family:'DM Sans',sans-serif;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer">✕ Salir</button>
+</div>
+
+<script type="module" src="rotaplaza.js"></script>
+</body>
+</html>
