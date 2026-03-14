@@ -173,10 +173,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const slots=getSlots();
     const libres=mDisp.filter(m=>!Object.values(asignaciones).some(a=>a.mozoId===m.id));
     const asigNormales=Object.keys(asignaciones).filter(id=>!id.startsWith("bar_")).length;
+    const barraDisp=mozosBar.filter(m=>m.disponible);
     document.getElementById("st-mozos").textContent=mDisp.length;
     document.getElementById("st-slots").textContent=slots.length;
     document.getElementById("st-asig").textContent=asigNormales;
     document.getElementById("st-libres").textContent=libres.length;
+    document.getElementById("st-barra").textContent=barraDisp.length;
   }
 
   function renderAvisoGlobal() {
@@ -695,51 +697,72 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(!aviso||!btn) return;
     const mDisp=mozos.filter(m=>m.disponible);
     const slots=getSlots();
-    const m=mDisp.length, p=slots.length;
-    const asigCount=Object.keys(asignaciones).length;
-    if(asigCount>0&&asigCount>=p&&p>0){
+    const totalMozos=mDisp.length, totalSlots=slots.length;
+
+    // Slots ya asignados manualmente y mozos ya usados
+    const slotsLibres=slots.filter(sl=>!asignaciones[sl.slotId]);
+    const mozosYaAsignados=new Set(Object.values(asignaciones).filter(a=>slots.some(sl=>sl.slotId)).map(a=>a.mozoId));
+    const mozosLibres=mDisp.filter(m=>!mozosYaAsignados.has(m.id));
+    const nLibres=mozosLibres.length, pLibres=slotsLibres.length;
+
+    if(pLibres===0&&totalSlots>0){
       aviso.style.display="block";hint.style.display="none";
       aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Todos los sub sectores están ocupados</strong>Liberá antes de volver a rotar.</div>`;
       btn.disabled=true;btn.style.opacity=".4";return;
     }
-    if(m===0||p===0){
+    if(totalMozos===0||totalSlots===0){
       aviso.style.display="block";hint.style.display="none";
       aviso.innerHTML=`<div class="aviso error"><strong>⛔ Sin mozos o sub sectores activos</strong>Activá mozos en Personal y sub sectores en Sectores.</div>`;
       btn.disabled=true;btn.style.opacity=".4";return;
     }
     hint.style.display="block";aviso.style.display="block";
-    if(m===p){
+    const preAsig=totalSlots-pLibres;
+    const infoPreAsig=preAsig>0?` (${preAsig} ya asignado${preAsig>1?"s":""})`:"";
+    if(nLibres===pLibres){
       btn.disabled=false;btn.style.opacity="1";
-      aviso.innerHTML=`<div class="aviso info"><strong>✅ Listo para rotar</strong>${m} mozo${m>1?"s":""} · ${p} sub sector${p>1?"es":""}.</div>`;
-    } else if(m<p){
+      aviso.innerHTML=`<div class="aviso info"><strong>✅ Listo para rotar</strong>${nLibres} mozo${nLibres>1?"s":""} · ${pLibres} sub sector${pLibres>1?"es":""}${infoPreAsig}.</div>`;
+    } else if(nLibres<pLibres){
       btn.disabled=true;btn.style.opacity=".4";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Menos mozos que sub sectores activos</strong>${m} mozo${m>1?"s":""} para ${p} sub sectores. Ajustá en Personal o Sectores.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Menos mozos libres que sub sectores libres</strong>${nLibres} mozo${nLibres>1?"s":""} para ${pLibres} sub sectores${infoPreAsig}. Ajustá en Personal o Sectores.</div>`;
     } else {
       btn.disabled=true;btn.style.opacity=".4";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Más mozos que sub sectores activos</strong>${m} mozos para ${p} sub sectores. Ajustá en Personal o Sectores.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Más mozos libres que sub sectores libres</strong>${nLibres} mozos para ${pLibres} sub sectores${infoPreAsig}. Ajustá en Personal o Sectores.</div>`;
     }
   }
 
   window.rotarAutomatico = async function() {
     const mDisp=mozos.filter(m=>m.disponible);
     const slots=getSlots();
-    if(mDisp.length===0||slots.length===0||mDisp.length!==slots.length) return;
+
+    // Identificar slots ya asignados manualmente y mozos ya usados
+    const slotsPreAsignados=new Set();
+    const mozosPreAsignados=new Set();
+    slots.forEach(sl=>{
+      const asig=asignaciones[sl.slotId];
+      if(asig){
+        slotsPreAsignados.add(sl.slotId);
+        mozosPreAsignados.add(asig.mozoId);
+      }
+    });
+
+    const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
+    const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
+
+    if(mozosLibres.length===0||slotsLibres.length===0||mozosLibres.length!==slotsLibres.length) return;
     const ahora=Date.now();
-    const n=mDisp.length;
+    const n=mozosLibres.length;
 
     // Leer índice circular desde Firestore
     const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
     const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
 
     // Calcular cuántas veces cada mozo estuvo en cada slot (historial completo)
-    // Usamos slotId como clave única para evitar confusión entre subsectores con mismo nombre
     const conteo={};
-    mDisp.forEach(m=>{ conteo[m.id]={}; slots.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
+    mozosLibres.forEach(m=>{ conteo[m.id]={}; slotsLibres.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
     for(const h of historial){
-      const mozo=mDisp.find(m=>m.nombre===h.mozo);
+      const mozo=mozosLibres.find(m=>m.nombre===h.mozo);
       if(!mozo) continue;
-      // Buscar el slotId que corresponde a este registro del historial
-      const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
+      const sl=slotsLibres.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
                            ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
       if(sl&&conteo[mozo.id]) conteo[mozo.id][sl.slotId]=(conteo[mozo.id][sl.slotId]||0)+1;
     }
@@ -750,12 +773,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // IDs de sectores con regla "evitar repetir"
     const sectoresEvitarIds=new Set(sectores.filter(s=>s.evitarRepetirSector).map(s=>s.id));
 
-    // Precalcular: para cada mozo, en qué sectores "evitar" estuvo en cada rotación pasada
-    // Agrupamos historial en rotaciones de N registros (N = cantidad de slots)
-    // historial ya viene ordenado por ts desc, así que los primeros N son la última rotación
+    // Precalcular penalización por sector
     const penSectorCache={};
     if(sectoresEvitarIds.size>0){
-      // Buscar el sectorId de cada registro del historial
       const histConSector=historial.map(h=>{
         const mozo=mDisp.find(m=>m.nombre===h.mozo);
         const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
@@ -763,36 +783,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         return {mozoId:mozo?.id, sectorId:sl?.sectorId};
       });
 
-      // Para cada mozo, recorrer sus registros y calcular penalización
-      // Penalización = qué tan reciente estuvo en un sector "evitar"
-      // 0 = nunca estuvo, 1 = estuvo en la última rotación, 0.5 = en la anterior, etc.
-      mDisp.forEach(m=>{
+      mozosLibres.forEach(m=>{
         penSectorCache[m.id]={};
-        // Obtener registros de este mozo en orden (más reciente primero)
         const misRegistros=histConSector.filter(h=>h.mozoId===m.id);
-        // Recorrer rotación por rotación (cada rotación = nSlots registros globales del historial)
         for(let i=0;i<misRegistros.length;i++){
           const reg=misRegistros[i];
           if(!reg.sectorId||!sectoresEvitarIds.has(reg.sectorId)) continue;
-          // Si ya tiene una penalización para este sector, quedarse con la más reciente (menor i)
           if(!(reg.sectorId in penSectorCache[m.id])){
-            // Penalización inversamente proporcional a qué tan atrás estuvo
-            // rotación 0 (última) = penalización alta, rotación 1 = media, etc.
             penSectorCache[m.id][reg.sectorId]=Math.max(0, 1 - (i * 0.2));
           }
         }
       });
     }
 
-    for(let pi=0;pi<slots.length;pi++){
-      const slot=slots[pi];
+    // Solo rotar slots libres, con mozos libres
+    for(let pi=0;pi<slotsLibres.length;pi++){
+      const slot=slotsLibres[pi];
 
-      // Construir candidatos: excluir usados y restringidos
-      // Ordenar: 1) menor penalización de sector, 2) menos veces en este slot, 3) orden circular
       const candidatos=[];
       for(let mi=0;mi<n;mi++){
         const circularPos=(idx+pi+mi)%n;
-        const mozo=mDisp[circularPos];
+        const mozo=mozosLibres[circularPos];
         if(mozosUsados.has(mozo.id)) continue;
         if((mozo.restricciones||[]).includes(slot.slotId)) continue;
         const pen=penSectorCache[mozo.id]?.[slot.sectorId]||0;
@@ -820,11 +831,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     await batch.commit();
 
     mozoRotIdx=nuevoIdx;
-    pendingHistorial=resultado.map(({mozoId,slot},i)=>{
-      const mozo=mozos.find(m=>m.id===mozoId);
-      return {mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora-i};
+    // Incluir en el historial tanto las asignaciones automáticas como las manuales previas
+    const todasLasAsig=[];
+    // Primero las pre-asignadas manualmente
+    slots.forEach(sl=>{
+      if(!slotsPreAsignados.has(sl.slotId)) return;
+      const asig=asignaciones[sl.slotId];
+      if(!asig) return;
+      const mozo=mozos.find(m=>m.id===asig.mozoId);
+      if(mozo) todasLasAsig.push({mozo:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
     });
-    document.getElementById("btn-confirmar").style.display="block";
+    // Después las rotadas automáticamente
+    resultado.forEach(({mozoId,slot})=>{
+      const mozo=mozos.find(m=>m.id===mozoId);
+      if(mozo) todasLasAsig.push({mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
+    });
+    pendingHistorial=todasLasAsig.map((h,i)=>({...h,ts:ahora-i}));
+    mostrarBannerPendiente();
     if(advertencias.length>0) setTimeout(()=>alert("Rotación con advertencias:\n\n"+advertencias.join("\n")),300);
   };
 
@@ -837,9 +860,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora},{merge:true});
     await batch.commit();
     pendingHistorial=[];
-    document.getElementById("btn-confirmar").style.display="none";
     document.getElementById("btn-pdf").style.display="block";
     document.getElementById("btn-presentacion").style.display="block";
+    ocultarBannerPendiente();
   };
 
   // ===================== POPUP ASIGNACION =====================
@@ -888,9 +911,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     ocupadas.forEach(id=>batch.delete(doc(asigCol,id)));
     await batch.commit();
     pendingHistorial=[];
-    document.getElementById("btn-confirmar").style.display="none";
     document.getElementById("btn-pdf").style.display="none";
     document.getElementById("btn-presentacion").style.display="none";
+    ocultarBannerPendiente();
   };
 
   // ===================== RESTRICCIONES =====================
@@ -1348,8 +1371,42 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     dragSrcId = null;
   };
 
+  // ===================== BANNER ROTACIÓN PENDIENTE =====================
+  function mostrarBannerPendiente() {
+    const banner=document.getElementById("pendiente-banner");
+    if(!banner) return;
+    banner.style.display="flex";
+    banner.innerHTML=`
+      <span class="pb-text">⚠️ Rotación sin confirmar</span>
+      <button class="pb-btn" onclick="confirmarRotacion()">✅ Confirmar</button>
+      <button class="pb-btn-descartar" onclick="descartarRotacion()">✕ Descartar</button>`;
+  }
+
+  function ocultarBannerPendiente() {
+    const banner=document.getElementById("pendiente-banner");
+    if(banner) banner.style.display="none";
+  }
+
+  window.descartarRotacion = async function() {
+    if(!confirm("¿Descartar la rotación pendiente? Las asignaciones actuales se mantienen pero no se guardan en el historial.")) return;
+    pendingHistorial=[];
+    ocultarBannerPendiente();
+  };
+
+  // Avisar al cerrar/recargar la página si hay rotación pendiente
+  window.addEventListener("beforeunload", function(e) {
+    if(pendingHistorial&&pendingHistorial.length>0){
+      e.preventDefault();
+      e.returnValue="";
+    }
+  });
+
   // ===================== TABS =====================
   window.switchTab = function(id,el) {
+    // Si hay rotación pendiente y se va de Operación, avisar
+    if(pendingHistorial&&pendingHistorial.length>0&&id!=="operacion"){
+      if(!confirm("Tenés una rotación sin confirmar. ¿Querés ir a otra pestaña sin confirmar?\n\nPodés confirmar desde el banner superior.")) return;
+    }
     document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
     document.getElementById("tab-"+id).classList.add("active");

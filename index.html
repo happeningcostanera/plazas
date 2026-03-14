@@ -24,6 +24,8 @@
     <span id="conn-status" class="online">● en línea</span>
   </div>
 
+  <div id="pendiente-banner" style="display:none"></div>
+
   <div id="tabs">
     <button class="tab-btn active" onclick="switchTab('operacion',this)">⚡ Operación</button>
     <button class="tab-btn"        onclick="switchTab('personal',this)">👥 Personal</button>
@@ -42,13 +44,14 @@
         <div class="stat"><div class="stat-num" id="st-slots">0</div><div class="stat-label">Sub sectores</div></div>
         <div class="stat"><div class="stat-num" id="st-asig">0</div><div class="stat-label">Asignados</div></div>
         <div class="stat"><div class="stat-num" id="st-libres">0</div><div class="stat-label">Sin asignar</div></div>
+        <div class="stat"><div class="stat-num" id="st-barra">0</div><div class="stat-label">Barra activos</div></div>
       </div>
       <div id="aviso-global"></div>
       <div class="section">
         <div class="section-title">🔄 Rotación automática</div>
         <div id="rotar-aviso" style="display:none;margin-bottom:12px"></div>
         <button class="btn-rotar" id="btn-rotar" onclick="rotarAutomatico()">⚡ ROTAR AHORA</button>
-        <button id="btn-confirmar" onclick="confirmarRotacion()" style="display:none;width:100%;padding:12px;border-radius:10px;border:1px solid var(--green);background:rgba(74,143,58,.15);color:var(--green2);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">✅ Confirmar rotación</button>
+        <button id="btn-editar-formacion" onclick="editarFormacion()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid var(--orange);background:rgba(176,90,16,.12);color:#f0a060;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">✏️ Editar formación</button>
         <button id="btn-pdf" onclick="generarPDF()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid var(--gold);background:rgba(201,147,58,.12);color:var(--gold2);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">📄 Descargar PDF</button>
         <button id="btn-presentacion" onclick="abrirPresentacion()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid #5a8fa0;background:rgba(60,120,150,.15);color:#90cfe0;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px">📺 Ver en pantalla</button>
         <p id="rotar-hint" style="font-size:11px;color:var(--text3);text-align:center">Asigna mozos a todos los slots activos — confirmá cuando estés conforme</p>

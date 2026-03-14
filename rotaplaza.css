@@ -21,7 +21,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .tab-content{display:none}.tab-content.active{display:block}
 .section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
 .section-title{font-size:12px;font-weight:600;color:var(--gold);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;gap:6px}
-#stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+#stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
 .stat{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center}
 .stat-num{font-size:22px;font-weight:700;color:var(--gold2)}
 .stat-label{font-size:9px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.3px}
@@ -140,7 +140,7 @@ select{appearance:none}
 @media print {
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   #header, #tabs, #stats, #aviso-global,
-  #rotar-aviso, #btn-rotar, #btn-confirmar, #btn-pdf, #rotar-hint,
+  #rotar-aviso, #btn-rotar, #btn-pdf, #rotar-hint, #pendiente-banner,
   .section-title, #libres-section, #btn-liberar-todo,
   #tab-personal, #tab-sectores, #tab-historial { display: none !important; }
   body { background: #fff !important; color: #000 !important; font-family: 'DM Sans', sans-serif; margin: 0; }
@@ -169,6 +169,13 @@ select{appearance:none}
   .ss-libre-txt { color: #aaa !important; font-size: 10px !important; }
   .ss-liberar { display: none !important; }
 }
+
+/* BANNER PENDIENTE */
+#pendiente-banner{background:linear-gradient(135deg,rgba(30,15,5,.97),rgba(50,25,10,.97));border-top:2px solid var(--orange);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;animation:pulse-banner 2s ease-in-out infinite;position:fixed;bottom:0;left:0;right:0;z-index:90}
+#pendiente-banner .pb-text{font-size:13px;font-weight:600;color:#f0a060;flex:1}
+#pendiente-banner .pb-btn{background:var(--green);color:#d0ffd0;border:none;border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+#pendiente-banner .pb-btn-descartar{background:transparent;border:1px solid var(--red);color:#f0a0a0;border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+@keyframes pulse-banner{0%,100%{opacity:1}50%{opacity:.7}}
 
 /* TURNO NOCHE */
 body.turno-noche #header h1{color:#90cfe0}
