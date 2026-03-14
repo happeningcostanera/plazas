@@ -170,6 +170,12 @@ select{appearance:none}
   .ss-liberar { display: none !important; }
 }
 
+/* TURNO NOCHE */
+body.turno-noche #header h1{color:#90cfe0}
+body.turno-noche .btn-rotar{background:linear-gradient(135deg,#5a8fa0,#90cfe0)}
+body.turno-noche .section-title{color:#5a8fa0}
+body.turno-noche .stat-num{color:#90cfe0}
+
 .empty{text-align:center;color:var(--text3);padding:30px;font-size:13px}
 /* DRAG & DROP */
 .sector-cfg-row{cursor:grab;user-select:none;transition:opacity .2s,transform .15s}
@@ -182,6 +188,20 @@ select{appearance:none}
 #barra-op-section .sector-row{border-bottom:none}
 #barra-op-section .sector-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
 
+
+/* ROTACIONES PASADAS */
+.rotacion-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px}
+.rotacion-card.rotacion-ultima{border-color:var(--gold);background:linear-gradient(135deg,rgba(201,147,58,.06),var(--bg))}
+.rotacion-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.rotacion-fecha{font-size:13px;font-weight:600;color:var(--gold2)}
+.rotacion-ultima .rotacion-fecha{font-size:14px}
+.rotacion-hora{font-size:11px;color:var(--text3)}
+.rotacion-grid{display:flex;flex-direction:column;gap:4px}
+.rotacion-sector-label{font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.4px;padding:8px 0 4px;border-bottom:1px solid var(--border)}
+.rotacion-sector-row{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}
+.rotacion-chip{background:linear-gradient(135deg,#1e3a14,#263d1a);border:1px solid #4a7a2a;border-radius:8px;padding:6px 10px;min-width:85px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.rotacion-chip-ss{font-size:11px;font-weight:600;color:var(--gold2)}
+.rotacion-chip-mozo{font-size:13px;font-weight:600;color:#a8d878}
 
 /* MODO PRESENTACION */
 .pres-sector-label{font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.6px;padding:16px 0 8px;border-bottom:1px solid var(--border2);margin-bottom:10px}

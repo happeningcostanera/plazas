@@ -19,7 +19,7 @@
     <div style="display:flex;align-items:center;gap:12px">
       <div style="width:1px;height:36px;background:var(--border2)"></div>
       <img src="img/LogoH55.png" alt="Sistemalf Plaza" style="height:32px;width:auto;display:block" />
-      <div><h1>Sistemalf Plaza</h1><small>Rotación de mozos</small></div>
+      <div><h1>Sistemalf Plaza</h1><small id="header-turno">Rotación de mozos</small></div>
     </div>
     <span id="conn-status" class="online">● en línea</span>
   </div>
@@ -28,6 +28,7 @@
     <button class="tab-btn active" onclick="switchTab('operacion',this)">⚡ Operación</button>
     <button class="tab-btn"        onclick="switchTab('personal',this)">👥 Personal</button>
     <button class="tab-btn"        onclick="switchTab('sectores',this)">🗺️ Sectores</button>
+    <button class="tab-btn"        onclick="switchTab('rotaciones',this)">🔄 Rotaciones</button>
     <button class="tab-btn"        onclick="switchTab('historial',this)">📋 Historial</button>
     <button class="tab-btn"        onclick="switchTab('barra',this)">🍸 Barra</button>
   </div>
@@ -125,6 +126,22 @@
         </div>
       </div>
       <div id="sectores-config"></div>
+    </div>
+
+    <!-- ROTACIONES -->
+    <div id="tab-rotaciones" class="tab-content">
+      <div class="section">
+        <div class="section-title">🔄 Rotaciones anteriores</div>
+        <div id="rotaciones-empty" class="empty">No hay rotaciones registradas aún.</div>
+        <div id="rotaciones-nav" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <button class="btn btn-ghost" id="rot-prev" onclick="rotPaginaAnterior()">← Anterior</button>
+            <span id="rot-counter" style="font-size:12px;color:var(--text3)"></span>
+            <button class="btn btn-ghost" id="rot-next" onclick="rotPaginaSiguiente()">Siguiente →</button>
+          </div>
+        </div>
+        <div id="rotaciones-list"></div>
+      </div>
     </div>
 
     <!-- HISTORIAL -->

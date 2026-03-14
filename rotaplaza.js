@@ -21,16 +21,25 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   const MAX_SS_PER_SECTOR = 5;
   const MAX_SS_PER_BAR_SECTOR = 10;
 
+  // ===================== TURNO =====================
+  const TURNOS_VALIDOS = ["manana", "noche"];
+  const TURNO_NOMBRES = { manana: "Mañana", noche: "Noche" };
+  const TURNO_COLORES = { manana: { accent: "#e8b866", bg: "rgba(201,147,58,.15)" }, noche: { accent: "#90cfe0", bg: "rgba(60,120,180,.15)" } };
+  const turno = new URLSearchParams(location.search).get("turno");
+  const turnoValido = TURNOS_VALIDOS.includes(turno);
+
   let popupSlotId=null, restMozoId=null, editCtx=null;
   let mozos=[], mozosBar=[], sectores=[], sectoresBar=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0;
 
+  // Colecciones compartidas (personal y sectores)
   const mozosCol    = collection(db,"mozos");
   const barraCol      = collection(db,"mozosBar");
   const sectoresBarCol = collection(db,"sectoresBar");
   const sectoresCol = collection(db,"sectores");
-  const asigCol     = collection(db,"asignaciones");
-  const histCol     = collection(db,"historial");
+  // Colecciones por turno (asignaciones e historial)
+  const asigCol     = collection(db, turnoValido ? "asignaciones_" + turno : "asignaciones");
+  const histCol     = collection(db, turnoValido ? "historial_" + turno : "historial");
 
   let renderAllScheduled=false;
   function scheduleRenderAll() {
@@ -47,9 +56,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   onSnapshot(query(sectoresBarCol,orderBy("orden","asc")), snap => { sectoresBar=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(query(sectoresCol,orderBy("orden","asc")), snap => { sectores=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(asigCol, snap => { asignaciones={}; snap.docs.forEach(d=>{asignaciones[d.id]=d.data();}); scheduleRenderAll(); });
-  onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); });
-  onSnapshot(doc(db,"meta","ultimaRotacion"), snap => { ultimaRotacionTs=snap.exists()?snap.data().ts:null; renderUltimaRotacion(); });
-  onSnapshot(doc(db,"meta","rotacion"), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
+  onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); });
+  const metaSuffix = turnoValido ? "_" + turno : "";
+  onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => { ultimaRotacionTs=snap.exists()?snap.data().ts:null; renderUltimaRotacion(); });
+  onSnapshot(doc(db,"meta","rotacion"+metaSuffix), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
 
   window.addEventListener("online",  ()=>setConn(true));
   window.addEventListener("offline", ()=>setConn(false));
@@ -60,10 +70,37 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     el.className=ok?"online":"offline";
   }
 
+  // Si no hay turno válido en la URL, mostrar pantalla de selección
+  if(!turnoValido){
+    document.getElementById("loader").style.display="none";
+    document.body.innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:24px;padding:20px">
+        <img src="img/LogoH55.png" alt="Sistemalf Plaza" style="height:48px;opacity:.8"/>
+        <h1 style="color:var(--gold2);font-size:22px;text-align:center">Sistemalf Plaza</h1>
+        <p style="color:var(--text3);font-size:13px">Seleccioná el turno</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+          <a href="?turno=manana" style="text-decoration:none;background:linear-gradient(135deg,rgba(201,147,58,.15),rgba(232,184,102,.08));border:1px solid #e8b866;border-radius:14px;padding:24px 40px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .2s">
+            <span style="font-size:36px">🌅</span>
+            <span style="color:#e8b866;font-size:18px;font-weight:700">Mañana</span>
+          </a>
+          <a href="?turno=noche" style="text-decoration:none;background:linear-gradient(135deg,rgba(60,120,180,.15),rgba(144,207,224,.08));border:1px solid #90cfe0;border-radius:14px;padding:24px 40px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .2s">
+            <span style="font-size:36px">🌙</span>
+            <span style="color:#90cfe0;font-size:18px;font-weight:700">Noche</span>
+          </a>
+        </div>
+      </div>`;
+  }
+
   const auth = getAuth(app);
-  signInAnonymously(auth).then(()=>{
+  if(!turnoValido) { /* no iniciar app sin turno */ }
+  else signInAnonymously(auth).then(()=>{
     document.getElementById("loader").style.display="none";
     document.getElementById("app").style.display="block";
+    // Mostrar turno en header
+    const headerTurno=document.getElementById("header-turno");
+    const tc=TURNO_COLORES[turno];
+    if(headerTurno) headerTurno.innerHTML=`<span style="color:${tc.accent}">${turno==="noche"?"🌙":"🌅"} Turno ${TURNO_NOMBRES[turno]}</span>`;
+    if(turno==="noche") document.body.classList.add("turno-noche");
     seedIfEmpty();
   }).catch(err=>{
     document.getElementById("loader").innerHTML=`<div style="color:#f0a0a0;font-size:13px;text-align:center">⛔ Error de autenticación<br><small>${err.message}</small></div>`;
@@ -115,9 +152,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const fecha=d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"long"});
     const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
     el.style.display="block";
-    el.innerHTML=`<div style="padding:10px 12px;border-radius:8px 8px 0 0;background:linear-gradient(135deg,rgba(201,147,58,.15),rgba(232,184,102,.08));border:1px solid var(--gold);border-bottom:none;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px">
-      <span style="font-size:15px;font-weight:700;color:var(--gold2)">🌅 TURNO MAÑANA — ${fecha}</span>
-      <span style="font-size:11px;color:var(--text3)">confirmada ${hora} · <span style="cursor:pointer;color:var(--gold);text-decoration:underline" onclick="generarPDF()">📄 PDF</span></span>
+    const turnoIcon = turno==="noche" ? "🌙" : "🌅";
+    const turnoLabel = TURNO_NOMBRES[turno] || "Mañana";
+    const turnoColor = TURNO_COLORES[turno] || TURNO_COLORES.manana;
+    el.innerHTML=`<div style="padding:10px 12px;border-radius:8px 8px 0 0;background:linear-gradient(135deg,${turnoColor.bg},rgba(232,184,102,.08));border:1px solid ${turnoColor.accent};border-bottom:none;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <span style="font-size:15px;font-weight:700;color:${turnoColor.accent}">${turnoIcon} TURNO ${turnoLabel.toUpperCase()} — ${fecha}</span>
+      <span style="font-size:11px;color:var(--text3)">confirmada ${hora} · <span style="cursor:pointer;color:${turnoColor.accent};text-decoration:underline" onclick="generarPDF()">📄 PDF</span></span>
     </div>`;
   }
 
@@ -544,6 +584,100 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     resumenTable.innerHTML = html;
   }
 
+  // ===================== ROTACIONES VISUALES =====================
+  let rotacionesAgrupadas=[];
+  let rotPaginaActual=0;
+
+  function agruparRotaciones() {
+    rotacionesAgrupadas=[];
+    let rotActual=[];
+    const UMBRAL_MS=5000;
+    for(const h of historial){
+      if(!h.ts) continue;
+      if(rotActual.length===0){
+        rotActual.push(h);
+      } else {
+        const diff=Math.abs(rotActual[rotActual.length-1].ts - h.ts);
+        if(diff<UMBRAL_MS){
+          rotActual.push(h);
+        } else {
+          if(rotActual.length>1) rotacionesAgrupadas.push(rotActual);
+          rotActual=[h];
+        }
+      }
+    }
+    if(rotActual.length>1) rotacionesAgrupadas.push(rotActual);
+  }
+
+  function renderRotaciones() {
+    const emptyEl = document.getElementById("rotaciones-empty");
+    const listEl = document.getElementById("rotaciones-list");
+    const navEl = document.getElementById("rotaciones-nav");
+    if(!emptyEl||!listEl||!navEl) return;
+
+    agruparRotaciones();
+
+    if(rotacionesAgrupadas.length===0){
+      emptyEl.style.display="block"; navEl.style.display="none"; listEl.innerHTML=""; return;
+    }
+    emptyEl.style.display="none";
+
+    // Asegurar que la página actual sea válida
+    if(rotPaginaActual>=rotacionesAgrupadas.length) rotPaginaActual=0;
+
+    // Navegación
+    navEl.style.display=rotacionesAgrupadas.length>1?"block":"none";
+    document.getElementById("rot-counter").textContent=`${rotPaginaActual+1} de ${rotacionesAgrupadas.length}`;
+    document.getElementById("rot-prev").disabled=rotPaginaActual===0;
+    document.getElementById("rot-prev").style.opacity=rotPaginaActual===0?".3":"1";
+    document.getElementById("rot-next").disabled=rotPaginaActual>=rotacionesAgrupadas.length-1;
+    document.getElementById("rot-next").style.opacity=rotPaginaActual>=rotacionesAgrupadas.length-1?".3":"1";
+
+    // Renderizar solo la rotación actual
+    const rot=rotacionesAgrupadas[rotPaginaActual];
+    const ts=rot[0].ts;
+    const d=new Date(ts);
+    const fecha=d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"long"});
+    const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+
+    const porSector={};
+    rot.forEach(h=>{
+      const sec=h.sector||"Sin sector";
+      if(!porSector[sec]) porSector[sec]=[];
+      porSector[sec].push(h);
+    });
+
+    let html=`<div class="rotacion-card${rotPaginaActual===0?" rotacion-ultima":""}">`;
+    html+=`<div class="rotacion-header">`;
+    html+=`<span class="rotacion-fecha">${rotPaginaActual===0?"Última rotación — ":""}${fecha}</span>`;
+    html+=`<span class="rotacion-hora">${hora} hs</span>`;
+    html+=`</div>`;
+    html+=`<div class="rotacion-grid">`;
+
+    for(const [sector, registros] of Object.entries(porSector)){
+      html+=`<div class="rotacion-sector-label">${sector}</div>`;
+      html+=`<div class="rotacion-sector-row">`;
+      registros.forEach(h=>{
+        const ssNombre=h.subsector||sector;
+        html+=`<div class="rotacion-chip">`;
+        html+=`<span class="rotacion-chip-ss">${ssNombre}</span>`;
+        html+=`<span class="rotacion-chip-mozo">${h.mozo||"—"}</span>`;
+        html+=`</div>`;
+      });
+      html+=`</div>`;
+    }
+
+    html+=`</div></div>`;
+    listEl.innerHTML=html;
+  }
+
+  window.rotPaginaAnterior = function() {
+    if(rotPaginaActual>0){ rotPaginaActual--; renderRotaciones(); }
+  };
+  window.rotPaginaSiguiente = function() {
+    if(rotPaginaActual<rotacionesAgrupadas.length-1){ rotPaginaActual++; renderRotaciones(); }
+  };
+
   window.renderHistorial = renderHistorial;
   window.limpiarFiltros = function() {
     const sel = document.getElementById("filtro-mozo");
@@ -594,7 +728,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const n=mDisp.length;
 
     // Leer índice circular desde Firestore
-    const idxSnap=await getDoc(doc(db,"meta","rotacion"));
+    const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
     const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
 
     // Calcular cuántas veces cada mozo estuvo en cada slot (historial completo)
@@ -613,37 +747,56 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const resultado=[], advertencias=[];
     const mozosUsados=new Set();
 
+    // IDs de sectores con regla "evitar repetir"
+    const sectoresEvitarIds=new Set(sectores.filter(s=>s.evitarRepetirSector).map(s=>s.id));
+
+    // Precalcular: para cada mozo, en qué sectores "evitar" estuvo en cada rotación pasada
+    // Agrupamos historial en rotaciones de N registros (N = cantidad de slots)
+    // historial ya viene ordenado por ts desc, así que los primeros N son la última rotación
+    const penSectorCache={};
+    if(sectoresEvitarIds.size>0){
+      // Buscar el sectorId de cada registro del historial
+      const histConSector=historial.map(h=>{
+        const mozo=mDisp.find(m=>m.nombre===h.mozo);
+        const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
+                             ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
+        return {mozoId:mozo?.id, sectorId:sl?.sectorId};
+      });
+
+      // Para cada mozo, recorrer sus registros y calcular penalización
+      // Penalización = qué tan reciente estuvo en un sector "evitar"
+      // 0 = nunca estuvo, 1 = estuvo en la última rotación, 0.5 = en la anterior, etc.
+      mDisp.forEach(m=>{
+        penSectorCache[m.id]={};
+        // Obtener registros de este mozo en orden (más reciente primero)
+        const misRegistros=histConSector.filter(h=>h.mozoId===m.id);
+        // Recorrer rotación por rotación (cada rotación = nSlots registros globales del historial)
+        for(let i=0;i<misRegistros.length;i++){
+          const reg=misRegistros[i];
+          if(!reg.sectorId||!sectoresEvitarIds.has(reg.sectorId)) continue;
+          // Si ya tiene una penalización para este sector, quedarse con la más reciente (menor i)
+          if(!(reg.sectorId in penSectorCache[m.id])){
+            // Penalización inversamente proporcional a qué tan atrás estuvo
+            // rotación 0 (última) = penalización alta, rotación 1 = media, etc.
+            penSectorCache[m.id][reg.sectorId]=Math.max(0, 1 - (i * 0.2));
+          }
+        }
+      });
+    }
+
     for(let pi=0;pi<slots.length;pi++){
       const slot=slots[pi];
-      // Sectores con regla "evitar repetir sector"
-      const sectoresEvitar=sectores.filter(s=>s.evitarRepetirSector).map(s=>s.id);
-      const nSlots=slots.length;
-
-      // ¿Estuvo este mozo en este sector en la última rotación completa?
-      const estuvoEnSectorReciente=(mozoId,sectorId)=>{
-        if(!sectoresEvitar.includes(sectorId)) return false;
-        let count=0;
-        for(const h of historial){
-          const mo=mDisp.find(m=>m.nombre===h.mozo);
-          if(!mo||mo.id!==mozoId) continue;
-          count++;
-          if(count>nSlots) break;
-          const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector);
-          if(sl&&sl.sectorId===sectorId) return true;
-        }
-        return false;
-      };
 
       // Construir candidatos: excluir usados y restringidos
-      // Ordenar: 1) sin penalización de sector, 2) menos veces en este slot, 3) orden circular
+      // Ordenar: 1) menor penalización de sector, 2) menos veces en este slot, 3) orden circular
       const candidatos=[];
       for(let mi=0;mi<n;mi++){
         const circularPos=(idx+pi+mi)%n;
         const mozo=mDisp[circularPos];
         if(mozosUsados.has(mozo.id)) continue;
         if((mozo.restricciones||[]).includes(slot.slotId)) continue;
-        const penSector=estuvoEnSectorReciente(mozo.id,slot.sectorId)?1:0;
-        candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),penSector,circularPos:mi});
+        const pen=penSectorCache[mozo.id]?.[slot.sectorId]||0;
+        candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),penSector:pen,circularPos:mi});
       }
       if(candidatos.length===0){
         advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
@@ -663,7 +816,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const nuevoIdx=(idx+1)%n;
     const batch=writeBatch(db);
     resultado.forEach(({slotId,mozoId})=>batch.set(doc(asigCol,slotId),{mozoId,desde:ahora}));
-    batch.set(doc(db,"meta","rotacion"),{idx:nuevoIdx},{merge:true});
+    batch.set(doc(db,"meta","rotacion"+metaSuffix),{idx:nuevoIdx},{merge:true});
     await batch.commit();
 
     mozoRotIdx=nuevoIdx;
@@ -681,7 +834,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const batch=writeBatch(db);
     pendingHistorial.forEach(h=>batch.set(doc(histCol),h));
     // Guardar timestamp de última confirmación
-    batch.set(doc(db,"meta","ultimaRotacion"),{ts:ahora},{merge:true});
+    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora},{merge:true});
     await batch.commit();
     pendingHistorial=[];
     document.getElementById("btn-confirmar").style.display="none";
@@ -1082,7 +1235,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const titulo = document.getElementById("pres-titulo");
     const fecha = document.getElementById("pres-fecha");
 
-    titulo.textContent = "🌅 Rotación — " + new Date().toLocaleDateString("es-AR", {weekday:"long",day:"2-digit",month:"long"});
+    const turnoIcon = turno==="noche" ? "🌙" : "🌅";
+    const turnoLabel = TURNO_NOMBRES[turno] || "Mañana";
+    titulo.textContent = turnoIcon + " Rotación " + turnoLabel + " — " + new Date().toLocaleDateString("es-AR", {weekday:"long",day:"2-digit",month:"long"});
     fecha.textContent = new Date().toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit"}) + " hs";
 
     let html = "";
