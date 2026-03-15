@@ -1288,14 +1288,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     await setDoc(doc(asigCol,slotId),{mozoId,desde:Date.now()});
   };
 
-  // ===================== HISTORIAL =====================
-  window.limpiarHistorial = async function() {
-    if(!confirm("¿Limpiar todo el historial?")) return;
-    const snap=await getDocs(histCol);
-    const batch=writeBatch(db);
-    snap.docs.forEach(d=>batch.delete(d.ref));
-    await batch.commit();
-  };
 
 
 
