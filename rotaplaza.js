@@ -30,7 +30,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   let popupSlotId=null, restMozoId=null, editCtx=null;
   let mozos=[], mozosBar=[], sectores=[], sectoresBar=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
-  let pendingHistorial=null, mozoRotIdx=0;
+  let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
 
   // Colecciones compartidas (personal y sectores)
   const mozosCol    = collection(db,"mozos");
@@ -238,7 +238,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             html+=`<span class="ss-mozo">${mozo.emoji} ${mozo.nombre}</span>`;
             if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
-            html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
+            if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
           } else {
             if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             html+=`<span class="ss-libre-txt">libre</span>`;
@@ -259,7 +259,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           html+=`<span class="ss-mozo">${mozo.emoji} ${mozo.nombre}</span>`;
           if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
-          html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
+          if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
         } else {
           if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           html+=`<span class="ss-libre-txt">libre</span>`;
@@ -851,22 +851,76 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(advertencias.length>0) setTimeout(()=>alert("Rotación con advertencias:\n\n"+advertencias.join("\n")),300);
   };
 
+  // IDs de documentos del historial de la última rotación confirmada (para poder reemplazarlos al editar)
+  let ultimaRotacionHistIds=[];
+
   window.confirmarRotacion = async function() {
-    if(pendingHistorial.length===0) return;
+    // Reconstruir historial desde las asignaciones actuales (refleja cualquier cambio manual)
+    const slots=getSlots();
     const ahora=Date.now();
+    const histActual=[];
+    slots.forEach(sl=>{
+      const asig=asignaciones[sl.slotId];
+      if(!asig) return;
+      const mozo=mozos.find(m=>m.id===asig.mozoId);
+      if(mozo) histActual.push({mozo:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+    });
+    if(histActual.length===0) return;
+
     const batch=writeBatch(db);
-    pendingHistorial.forEach(h=>batch.set(doc(histCol),h));
-    // Guardar timestamp de última confirmación
+
+    // Si estamos re-confirmando (editando formación), borrar los registros anteriores
+    if(ultimaRotacionHistIds.length>0){
+      ultimaRotacionHistIds.forEach(id=>batch.delete(doc(histCol,id)));
+    }
+
+    // Guardar nuevos registros y capturar sus IDs
+    const newRefs=[];
+    histActual.forEach((h,i)=>{
+      const ref=doc(histCol);
+      batch.set(ref,{...h,ts:ahora-i});
+      newRefs.push(ref.id);
+    });
+
     batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora},{merge:true});
     await batch.commit();
+
+    ultimaRotacionHistIds=newRefs;
     pendingHistorial=[];
+    formacionBloqueada=true;
     document.getElementById("btn-pdf").style.display="block";
     document.getElementById("btn-presentacion").style.display="block";
+    document.getElementById("btn-editar-formacion").style.display="block";
     ocultarBannerPendiente();
+    renderAll();
+  };
+
+  // ===================== EDITAR FORMACION =====================
+  window.editarFormacion = function() {
+    // Reconstruir pendingHistorial con las asignaciones actuales
+    const slots=getSlots();
+    const ahora=Date.now();
+    const todasLasAsig=[];
+    slots.forEach(sl=>{
+      const asig=asignaciones[sl.slotId];
+      if(!asig) return;
+      const mozo=mozos.find(m=>m.id===asig.mozoId);
+      if(mozo) todasLasAsig.push({mozo:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+    });
+    pendingHistorial=todasLasAsig.map((h,i)=>({...h,ts:ahora-i}));
+
+    // Desbloquear y mostrar banner
+    formacionBloqueada=false;
+    document.getElementById("btn-editar-formacion").style.display="none";
+    document.getElementById("btn-pdf").style.display="none";
+    document.getElementById("btn-presentacion").style.display="none";
+    mostrarBannerPendiente();
+    renderAll();
   };
 
   // ===================== POPUP ASIGNACION =====================
   window.chipClick = function(slotId) {
+    if(formacionBloqueada) return;
     if(asignaciones[slotId]) return;
     abrirPopup(slotId);
   };
@@ -894,15 +948,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozo=mozos.find(m=>m.id===mozoId);
     const slot=getSlots().find(s=>s.slotId===popupSlotId);
     const ahora=Date.now();
-    const batch=writeBatch(db);
-    batch.set(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
-    batch.set(doc(histCol),{mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
-    await batch.commit();
+    if(pendingHistorial&&pendingHistorial.length>0){
+      // En modo edición/rotación pendiente: solo asignar, el historial se graba al confirmar
+      await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
+    } else {
+      // Asignación suelta (sin rotación pendiente): guardar en historial directamente
+      const batch=writeBatch(db);
+      batch.set(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
+      batch.set(doc(histCol),{mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
+      await batch.commit();
+    }
     cerrarPopup();
   };
 
   // ===================== LIBERAR =====================
-  window.liberarSlot = async function(slotId) { await deleteDoc(doc(asigCol,slotId)); };
+  window.liberarSlot = async function(slotId) {
+    if(formacionBloqueada) return;
+    await deleteDoc(doc(asigCol,slotId));
+  };
   window.liberarTodo = async function() {
     const ocupadas=Object.keys(asignaciones);
     if(ocupadas.length===0) return;
@@ -911,6 +974,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     ocupadas.forEach(id=>batch.delete(doc(asigCol,id)));
     await batch.commit();
     pendingHistorial=[];
+    ultimaRotacionHistIds=[];
+    formacionBloqueada=false;
+    document.getElementById("btn-editar-formacion").style.display="none";
     document.getElementById("btn-pdf").style.display="none";
     document.getElementById("btn-presentacion").style.display="none";
     ocultarBannerPendiente();
@@ -1388,9 +1454,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   window.descartarRotacion = async function() {
-    if(!confirm("¿Descartar la rotación pendiente? Las asignaciones actuales se mantienen pero no se guardan en el historial.")) return;
+    const estaEditando=ultimaRotacionHistIds.length>0;
+    const msg=estaEditando
+      ? "¿Descartar los cambios? La formación original se mantiene en el historial."
+      : "¿Descartar la rotación pendiente? Las asignaciones actuales se mantienen pero no se guardan en el historial.";
+    if(!confirm(msg)) return;
     pendingHistorial=[];
     ocultarBannerPendiente();
+    // Si estaba editando, volver a mostrar los botones post-confirmación
+    if(estaEditando){
+      document.getElementById("btn-editar-formacion").style.display="block";
+      document.getElementById("btn-pdf").style.display="block";
+      document.getElementById("btn-presentacion").style.display="block";
+    }
   };
 
   // Avisar al cerrar/recargar la página si hay rotación pendiente
