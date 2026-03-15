@@ -149,7 +149,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const turnoColor = TURNO_COLORES[turno] || TURNO_COLORES.manana;
     el.innerHTML=`<div style="padding:10px 12px;border-radius:8px 8px 0 0;background:linear-gradient(135deg,${turnoColor.bg},rgba(232,184,102,.08));border:1px solid ${turnoColor.accent};border-bottom:none;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px">
       <span style="font-size:15px;font-weight:700;color:${turnoColor.accent}">${turnoIcon} TURNO ${turnoLabel.toUpperCase()} — ${fecha}</span>
-      <span style="font-size:11px;color:var(--text3)">confirmada ${hora} · <span style="cursor:pointer;color:${turnoColor.accent};text-decoration:underline" onclick="generarPDF()">📄 PDF</span></span>
+      <span style="font-size:11px;color:var(--text3)">confirmada ${hora}</span>
     </div>`;
   }
 
