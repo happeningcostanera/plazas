@@ -708,7 +708,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     if(pLibres===0&&totalSlots>0){
       aviso.style.display="block";hint.style.display="none";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Todos los sub sectores están ocupados</strong>Liberá antes de volver a rotar.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Todas las Plazas están asignadas</strong>Liberá antes de volver a rotar.</div>`;
       btn.disabled=true;btn.style.opacity=".4";return;
     }
     if(totalMozos===0||totalSlots===0){
