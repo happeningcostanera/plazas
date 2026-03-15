@@ -142,7 +142,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(!ultimaRotacionTs){el.style.display="none";return;}
     const d=new Date(ultimaRotacionTs);
     const fecha=d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"long"});
-    const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+    const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false});
     el.style.display="block";
     const turnoIcon = turno==="noche" ? "🌙" : "🌅";
     const turnoLabel = TURNO_NOMBRES[turno] || "Mañana";
@@ -502,7 +502,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       document.getElementById("hist-rows").innerHTML = filtrado.map(h => {
         const nombre=resolverNombreMozo(h);
         const d = h.ts ? new Date(h.ts) : null;
-        const hora  = d ? d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}) : "--:--";
+        const hora  = d ? d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false}) : "--:--";
         const fecha = d ? d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"}) : "";
         const slotLabel = h.subsector || h.sector || "";
         const key = `${nombre}||${slotLabel}`;
@@ -641,7 +641,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const ts=rot[0].ts;
     const d=new Date(ts);
     const fecha=d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"long"});
-    const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+    const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false});
 
     const porSector={};
     rot.forEach(h=>{
