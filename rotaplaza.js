@@ -454,6 +454,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     }).join("");
   }
 
+  // Resolver nombre actual de un mozo desde un registro del historial (por ID o fallback nombre)
+  function resolverNombreMozo(h) {
+    const m=mozos.find(m=>m.id===h.mozoId);
+    return m?m.nombre:"";
+  }
+
   function renderHistorial() {
     // Leer filtros ANTES de tocar el DOM del selector
     const filtroMozo  = document.getElementById("filtro-mozo")?.value || "";
@@ -462,7 +468,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Actualizar opciones del selector sin destruir la selección actual
     const sel = document.getElementById("filtro-mozo");
     if (sel) {
-      const nombres = [...new Set(historial.map(h=>h.mozo).filter(Boolean))].sort();
+      const nombres = [...new Set(historial.map(h=>resolverNombreMozo(h)).filter(Boolean))].sort();
       // Solo reconstruir si cambió la lista de mozos
       const optsActuales = [...sel.options].map(o=>o.value).filter(Boolean).join(",");
       const optsNuevas = nombres.join(",");
@@ -473,7 +479,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     }
 
     let filtrado = historial;
-    if (filtroMozo)  filtrado = filtrado.filter(h => h.mozo === filtroMozo);
+    if (filtroMozo)  filtrado = filtrado.filter(h => resolverNombreMozo(h) === filtroMozo);
     if (filtroFecha) filtrado = filtrado.filter(h => {
       if (!h.ts) return false;
       return toYMD(h.ts) === filtroFecha;
@@ -493,27 +499,29 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       // Calcular contador acumulado una sola vez: cuántas veces cada mozo estuvo en cada slot (en TODO el historial)
       const countMap=new Map();
       historial.forEach(h=>{
-        if(!h.mozo) return;
+        const nombreMozo=resolverNombreMozo(h);
+        if(!nombreMozo) return;
         const slotLabel=h.subsector||h.sector||"";
         if(!slotLabel) return;
-        const key=`${h.mozo}||${slotLabel}`;
+        const key=`${nombreMozo}||${slotLabel}`;
         countMap.set(key,(countMap.get(key)||0)+1);
       });
 
       document.getElementById("hist-rows").innerHTML = filtrado.map(h => {
+        const nombre=resolverNombreMozo(h);
         const d = h.ts ? new Date(h.ts) : null;
         const hora  = d ? d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}) : "--:--";
         const fecha = d ? d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"}) : "";
         const slotLabel = h.subsector || h.sector || "";
-        const key = `${h.mozo||""}||${slotLabel}`;
+        const key = `${nombre}||${slotLabel}`;
         const count = countMap.get(key)||0;
         return `<div class="hist-row">
           <span class="hist-hora">${hora}</span>
           <span style="font-size:11px;color:var(--text3)">${fecha}</span>
-          <span>${h.mozo||""}</span>
+          <span>${nombre}</span>
           <span style="color:var(--gold2)">${h.sector||""}</span>
           <span style="color:var(--text2)">${h.subsector||""}</span>
-          <span class="hist-count-badge" title="${h.mozo} estuvo ${count}x en ${slotLabel}">${count}</span>
+          <span class="hist-count-badge" title="${nombre} estuvo ${count}x en ${slotLabel}">${count}</span>
         </div>`;
       }).join("");
     }
@@ -533,10 +541,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       if (!h.ts) return false;
       return toYMD(h.ts) === filtroFecha;
     });
-    if (filtroMozo) base = base.filter(h => h.mozo === filtroMozo);
+    if (filtroMozo) base = base.filter(h => resolverNombreMozo(h) === filtroMozo);
 
     // Obtener mozos únicos
-    const mozosU = [...new Set(base.map(h=>h.mozo).filter(Boolean))].sort();
+    const mozosU = [...new Set(base.map(h=>resolverNombreMozo(h)).filter(Boolean))].sort();
     if (mozosU.length === 0) { resumenTable.innerHTML=`<div class="empty">Sin datos para este filtro.</div>`; return; }
 
     // Construir labels de columna: "Sector › SubSector" para evitar ambigüedad
@@ -552,10 +560,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Precalcular conteos por (mozo, slotLabel) para no filtrar en cada celda
     const resumenCountMap = new Map();
     base.forEach(h=>{
-      if(!h.mozo) return;
+      const nm=resolverNombreMozo(h);
+      if(!nm) return;
       const lbl = h.subsector ? `${h.sector} › ${h.subsector}` : (h.sector||"");
       if(!lbl) return;
-      const key = `${h.mozo}||${lbl}`;
+      const key = `${nm}||${lbl}`;
       resumenCountMap.set(key,(resumenCountMap.get(key)||0)+1);
     });
 
@@ -572,7 +581,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     html += `<th>Total</th></tr></thead><tbody>`;
 
     mozosU.forEach(mozo => {
-      const filas = base.filter(h => h.mozo === mozo);
+      const filas = base.filter(h => resolverNombreMozo(h) === mozo);
       const total = filas.length;
       html += `<tr><td>${mozo}</td>`;
       slotLabels.forEach(lbl => {
@@ -663,7 +672,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const ssNombre=h.subsector||sector;
         html+=`<div class="rotacion-chip">`;
         html+=`<span class="rotacion-chip-ss">${ssNombre}</span>`;
-        html+=`<span class="rotacion-chip-mozo">${h.mozo||"—"}</span>`;
+        html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}</span>`;
         html+=`</div>`;
       });
       html+=`</div>`;
@@ -760,7 +769,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const conteo={};
     mozosLibres.forEach(m=>{ conteo[m.id]={}; slotsLibres.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
     for(const h of historial){
-      const mozo=mozosLibres.find(m=>m.nombre===h.mozo);
+      const mozo=mozosLibres.find(m=>m.id===h.mozoId);
       if(!mozo) continue;
       const sl=slotsLibres.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
                            ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
@@ -770,30 +779,60 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const resultado=[], advertencias=[];
     const mozosUsados=new Set();
 
-    // IDs de sectores con regla "evitar repetir"
-    const sectoresEvitarIds=new Set(sectores.filter(s=>s.evitarRepetirSector).map(s=>s.id));
+    // Orden de sectores activos (el orden de la pestaña Sectores define la secuencia de rotación)
+    const sectoresActivos=sectores.filter(s=>s.disponible);
+    const ordenSectorIds=sectoresActivos.map(s=>s.id);
 
-    // Precalcular penalización por sector
-    const penSectorCache={};
-    if(sectoresEvitarIds.size>0){
-      const histConSector=historial.map(h=>{
-        const mozo=mDisp.find(m=>m.nombre===h.mozo);
+    // IDs de sectores con regla "evitar repetir"
+    const sectoresEvitarIds=new Set(sectoresActivos.filter(s=>s.evitarRepetirSector).map(s=>s.id));
+
+    // Para cada mozo, averiguar en qué sector estuvo en la última rotación
+    const ultimoSectorPorMozo={};
+    mozosLibres.forEach(m=>{
+      for(const h of historial){
+        if(h.mozoId!==m.id) continue;
+        // Encontrar el sector de este registro
         const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
                              ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
-        return {mozoId:mozo?.id, sectorId:sl?.sectorId};
-      });
+        if(sl){ ultimoSectorPorMozo[m.id]=sl.sectorId; break; }
+      }
+    });
 
-      mozosLibres.forEach(m=>{
-        penSectorCache[m.id]={};
-        const misRegistros=histConSector.filter(h=>h.mozoId===m.id);
-        for(let i=0;i<misRegistros.length;i++){
-          const reg=misRegistros[i];
-          if(!reg.sectorId||!sectoresEvitarIds.has(reg.sectorId)) continue;
-          if(!(reg.sectorId in penSectorCache[m.id])){
-            penSectorCache[m.id][reg.sectorId]=Math.max(0, 1 - (i * 0.2));
-          }
-        }
-      });
+    // Calcular el sector ideal para cada mozo (el siguiente en el orden)
+    const sectorIdealPorMozo={};
+    mozosLibres.forEach(m=>{
+      const ultimoSector=ultimoSectorPorMozo[m.id];
+      if(!ultimoSector){
+        sectorIdealPorMozo[m.id]=null; // sin historial, cualquier sector vale
+        return;
+      }
+      const idxActual=ordenSectorIds.indexOf(ultimoSector);
+      if(idxActual===-1){
+        sectorIdealPorMozo[m.id]=null;
+        return;
+      }
+      // El siguiente sector en la secuencia (circular)
+      const idxSiguiente=(idxActual+1)%ordenSectorIds.length;
+      sectorIdealPorMozo[m.id]=ordenSectorIds[idxSiguiente];
+    });
+
+    // Penalización: qué tan lejos está el slot del sector ideal del mozo
+    // 0 = es el sector ideal, 1 = un sector de distancia, 2 = dos, etc.
+    function distanciaSector(mozoId, sectorId) {
+      const ideal=sectorIdealPorMozo[mozoId];
+      if(!ideal) return 0; // sin preferencia
+      const idxIdeal=ordenSectorIds.indexOf(ideal);
+      const idxSlot=ordenSectorIds.indexOf(sectorId);
+      if(idxIdeal===-1||idxSlot===-1) return 0;
+      const total=ordenSectorIds.length;
+      return (idxSlot-idxIdeal+total)%total;
+    }
+
+    // Penalización por sector "evitar repetir"
+    function penEvitarRepetir(mozoId, sectorId) {
+      if(!sectoresEvitarIds.has(sectorId)) return 0;
+      const ultimo=ultimoSectorPorMozo[mozoId];
+      return (ultimo===sectorId)?1:0;
     }
 
     // Solo rotar slots libres, con mozos libres
@@ -806,14 +845,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const mozo=mozosLibres[circularPos];
         if(mozosUsados.has(mozo.id)) continue;
         if((mozo.restricciones||[]).includes(slot.slotId)) continue;
-        const pen=penSectorCache[mozo.id]?.[slot.sectorId]||0;
-        candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),penSector:pen,circularPos:mi});
+        const dist=distanciaSector(mozo.id, slot.sectorId);
+        const penRepetir=penEvitarRepetir(mozo.id, slot.sectorId);
+        candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),dist,penRepetir,circularPos:mi});
       }
       if(candidatos.length===0){
         advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
         continue;
       }
-      candidatos.sort((a,b)=>a.penSector-b.penSector||a.veces-b.veces||a.circularPos-b.circularPos);
+      // Prioridad: 1) sector ideal (menor distancia), 2) evitar repetir, 3) menos veces en slot, 4) circular
+      candidatos.sort((a,b)=>a.dist-b.dist||a.penRepetir-b.penRepetir||a.veces-b.veces||a.circularPos-b.circularPos);
       const elegido=candidatos[0].mozo;
       resultado.push({slotId:slot.slotId,mozoId:elegido.id,slot});
       mozosUsados.add(elegido.id);
@@ -839,12 +880,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) todasLasAsig.push({mozo:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+      if(mozo) todasLasAsig.push({mozoId:asig.mozoId,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
     });
     // Después las rotadas automáticamente
     resultado.forEach(({mozoId,slot})=>{
       const mozo=mozos.find(m=>m.id===mozoId);
-      if(mozo) todasLasAsig.push({mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
+      if(mozo) todasLasAsig.push({mozoId,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
     });
     pendingHistorial=todasLasAsig.map((h,i)=>({...h,ts:ahora-i}));
     mostrarBannerPendiente();
@@ -863,7 +904,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) histActual.push({mozo:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+      if(mozo) histActual.push({mozoId:asig.mozoId,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
     });
     if(histActual.length===0) return;
 
@@ -905,7 +946,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) todasLasAsig.push({mozo:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+      if(mozo) todasLasAsig.push({mozoId:asig.mozoId,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
     });
     pendingHistorial=todasLasAsig.map((h,i)=>({...h,ts:ahora-i}));
 
@@ -945,7 +986,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.cerrarPopup = function() { document.getElementById("popup-overlay").classList.remove("show"); popupSlotId=null; };
   window.asignarManual = async function(mozoId) {
     if(!popupSlotId) return;
-    const mozo=mozos.find(m=>m.id===mozoId);
     const slot=getSlots().find(s=>s.slotId===popupSlotId);
     const ahora=Date.now();
     if(pendingHistorial&&pendingHistorial.length>0){
@@ -955,7 +995,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       // Asignación suelta (sin rotación pendiente): guardar en historial directamente
       const batch=writeBatch(db);
       batch.set(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
-      batch.set(doc(histCol),{mozo:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
+      batch.set(doc(histCol),{mozoId,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
       await batch.commit();
     }
     cerrarPopup();
@@ -1034,9 +1074,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const {tipo,id,idx}=editCtx;
     const desc=document.getElementById("edit-desc").value.trim();
     if(tipo==="mozo"){
-      const nombreViejo=mozos.find(m=>m.id===id)?.nombre;
       await setDoc(doc(mozosCol,id),{nombre},{merge:true});
-      if(nombreViejo&&nombreViejo!==nombre){const snap=await getDocs(histCol);const batch=writeBatch(db);snap.docs.forEach(d=>{if(d.data().mozo===nombreViejo)batch.set(d.ref,{mozo:nombre},{merge:true});});await batch.commit();}
     } else if(tipo==="sector"){
       const nombreViejo=sectores.find(s=>s.id===id)?.nombre;
       await setDoc(doc(sectoresCol,id),{nombre,descripcion:desc},{merge:true});
