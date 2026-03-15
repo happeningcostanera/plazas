@@ -24,6 +24,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   let mozos=[], mozosBar=[], sectores=[], sectoresBar=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
 
+  // Campo de disponibilidad por turno (fallback a "disponible" para datos existentes)
+  const dispKey = turnoValido ? "disponible_" + turno : "disponible";
+  function isDisp(item) { return dispKey in item ? !!item[dispKey] : !!item.disponible; }
+
   // Colecciones compartidas (personal y sectores)
   const mozosCol    = collection(db,"mozos");
   const barraCol      = collection(db,"mozosBar");
@@ -103,24 +107,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(!snap.empty) return;
     const batch=writeBatch(db);
     [["Carlos","👨‍🍳"],["Laura","👩‍🍳"],["Martín","👨‍🍳"],["Sofía","👩‍🍳"],["Diego","👨‍🍳"],["Ana","👩‍🍳"]]
-      .forEach(([nombre,emoji])=>batch.set(doc(mozosCol),{nombre,emoji,disponible:true,restricciones:[]}));
+      .forEach(([nombre,emoji])=>batch.set(doc(mozosCol),{nombre,emoji,[dispKey]:true,restricciones:[]}));
     [
       {nombre:"Parque",subsectores:[]},
-      {nombre:"Deck",subsectores:[{id:"ss1",nombre:"Deck 1",disponible:true},{id:"ss2",nombre:"Deck 2",disponible:true}]},
-      {nombre:"Salón",subsectores:[{id:"ss1",nombre:"Salón 1",disponible:true},{id:"ss2",nombre:"Salón 2",disponible:true},{id:"ss3",nombre:"Salón 3",disponible:true},{id:"ss4",nombre:"Salón 4",disponible:true}]},
+      {nombre:"Deck",subsectores:[{id:"ss1",nombre:"Deck 1",[dispKey]:true},{id:"ss2",nombre:"Deck 2",[dispKey]:true}]},
+      {nombre:"Salón",subsectores:[{id:"ss1",nombre:"Salón 1",[dispKey]:true},{id:"ss2",nombre:"Salón 2",[dispKey]:true},{id:"ss3",nombre:"Salón 3",[dispKey]:true},{id:"ss4",nombre:"Salón 4",[dispKey]:true}]},
       {nombre:"Pasillo",subsectores:[]},
       {nombre:"Cava",subsectores:[]},
       {nombre:"Cafetería",subsectores:[]},
       {nombre:"Barra",subsectores:[]}
-    ].forEach((s,i)=>batch.set(doc(sectoresCol),{nombre:s.nombre,disponible:true,subsectores:s.subsectores,orden:i}));
+    ].forEach((s,i)=>batch.set(doc(sectoresCol),{nombre:s.nombre,[dispKey]:true,subsectores:s.subsectores,orden:i}));
     await batch.commit();
   }
 
   function getSlots() {
     // Solo subsectores activos dentro de sectores activos (excluye sectores de barra)
     const slots=[];
-    sectores.filter(s=>s.disponible).forEach(s=>{
-      const subs=(s.subsectores||[]).filter(ss=>ss.disponible);
+    sectores.filter(s=>isDisp(s)).forEach(s=>{
+      const subs=(s.subsectores||[]).filter(ss=>isDisp(ss));
       subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss.nombre}));
     });
     return slots;
@@ -129,8 +133,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   function getSlotsBar() {
     // Subsectores activos de sectores de barra (colección separada)
     const slots=[];
-    sectoresBar.filter(s=>s.disponible).forEach(s=>{
-      const subs=(s.subsectores||[]).filter(ss=>ss.disponible);
+    sectoresBar.filter(s=>isDisp(s)).forEach(s=>{
+      const subs=(s.subsectores||[]).filter(ss=>isDisp(ss));
       subs.forEach(ss=>slots.push({slotId:"bar_"+s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss.nombre}));
     });
     return slots;
@@ -161,11 +165,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   function renderStats() {
-    const mDisp=mozos.filter(m=>m.disponible);
+    const mDisp=mozos.filter(m=>isDisp(m));
     const slots=getSlots();
     const libres=mDisp.filter(m=>!Object.values(asignaciones).some(a=>a.mozoId===m.id));
     const asigNormales=Object.keys(asignaciones).filter(id=>!id.startsWith("bar_")).length;
-    const barraDisp=mozosBar.filter(m=>m.disponible);
+    const barraDisp=mozosBar.filter(m=>isDisp(m));
     document.getElementById("st-mozos").textContent=mDisp.length;
     document.getElementById("st-slots").textContent=slots.length;
     document.getElementById("st-asig").textContent=asigNormales;
@@ -176,7 +180,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   function renderAvisoGlobal() {
     const el=document.getElementById("aviso-global");
     const slots=getSlots();
-    const mozosLibres=mozos.filter(m=>m.disponible&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
+    const mozosLibres=mozos.filter(m=>isDisp(m)&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
     const conflictos=slots.filter(sl=>!asignaciones[sl.slotId]&&mozosLibres.length>0&&mozosLibres.every(m=>(m.restricciones||[]).includes(sl.slotId)));
     if(conflictos.length>0) {
       const nombres=conflictos.map(sl=>sl.ssNombre||sl.sectorNombre).join(", ");
@@ -206,10 +210,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     let firstSector=true;
     sectores.forEach(s=>{
       const subs=s.subsectores||[];
-      const subsActivos=subs.filter(ss=>ss.disponible);
+      const subsActivos=subs.filter(ss=>isDisp(ss));
       const tieneSubsActivos=subsActivos.length>0;
 
-      if(!s.disponible) return; // skip inactive sectors entirely
+      if(!isDisp(s)) return; // skip inactive sectors entirely
 
       // Sector label separator
       html+=`<div class="sector-label${firstSector?" first":""}">${s.nombre}</div>`;
@@ -266,7 +270,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   function renderLibres() {
-    const libres=mozos.filter(m=>m.disponible&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
+    const libres=mozos.filter(m=>isDisp(m)&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
     document.getElementById("libres-section").style.display=libres.length?"block":"none";
     document.getElementById("libres-list").innerHTML=libres.map(m=>`<span class="chip on">${m.emoji} ${m.nombre}</span>`).join("");
     renderBarraGrid();
@@ -277,8 +281,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Construir HTML de grilla de barra (reutilizado en dos lugares)
     const buildBarraHtml = () => {
       let html="";
-      sectoresBar.filter(s=>s.disponible).forEach(s=>{
-        const subs=(s.subsectores||[]).filter(ss=>ss.disponible);
+      sectoresBar.filter(s=>isDisp(s)).forEach(s=>{
+        const subs=(s.subsectores||[]).filter(ss=>isDisp(ss));
         html+=`<div class="sector-row"><div class="sector-label">${s.nombre}</div><div class="sector-chips">`;
         if(subs.length===0){
           html+=`<span style="font-size:11px;color:var(--text3);font-style:italic">Sin sub sectores activos</span>`;
@@ -304,7 +308,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       return html;
     };
 
-    const hasBarSectors = sectoresBar.filter(s=>s.disponible).length>0;
+    const hasBarSectors = sectoresBar.filter(s=>isDisp(s)).length>0;
 
     // Grilla en pestaña Barra
     const opGrid=document.getElementById("barra-op-grid");
@@ -327,7 +331,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozoBarAsignadosIds=new Set(
       slotsBarActivos.map(sl=>asignaciones[sl.slotId]?.mozoId).filter(Boolean)
     );
-    const barLibres=mozosBar.filter(m=>m.disponible&&!mozoBarAsignadosIds.has(m.id));
+    const barLibres=mozosBar.filter(m=>isDisp(m)&&!mozoBarAsignadosIds.has(m.id));
     const barLibresSec=document.getElementById("barra-libres-section");
     const barLibresList=document.getElementById("barra-libres-list");
     if(barLibresSec&&barLibresList){
@@ -347,16 +351,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const canAdd=subs.length<MAX_SS_PER_BAR_SECTOR;
       const subsHtml=subs.map((ss,i)=>`
         <div class="ss-cfg-row" style="flex-wrap:wrap">
-          <span class="ss-cfg-name ${ss.disponible?"":"off"}">${ss.nombre}</span>
+          <span class="ss-cfg-name ${isDisp(ss)?"":"off"}">${ss.nombre}</span>
           <button class="btn btn-ghost" onclick="editarNombreSubsectorBar('${s.id}',${i})">✏️</button>
-          <button class="btn ${ss.disponible?"btn-gold":"btn-green"}" onclick="toggleSubsectorBar('${s.id}',${i},${!ss.disponible})">${ss.disponible?"Desact.":"Activ."}</button>
+          <button class="btn ${isDisp(ss)?"btn-gold":"btn-green"}" onclick="toggleSubsectorBar('${s.id}',${i},${!isDisp(ss)})">${isDisp(ss)?"Desact.":"Activ."}</button>
           <button class="btn btn-red" onclick="eliminarSubsectorBar('${s.id}',${i})">✕</button>
         </div>`).join("");
       return `<div class="sector-cfg-block">
         <div class="sector-cfg-header" style="flex-wrap:wrap">
-          <span class="sector-cfg-name ${s.disponible?"":"off"}">${s.nombre}</span>
+          <span class="sector-cfg-name ${isDisp(s)?"":"off"}">${s.nombre}</span>
           <button class="btn btn-ghost" onclick="editarNombreSectorBar('${s.id}')">✏️</button>
-          <button class="btn ${s.disponible?"btn-gold":"btn-green"}" onclick="toggleSectorBar('${s.id}',${!s.disponible})">${s.disponible?"Desact.":"Activ."}</button>
+          <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSectorBar('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
           <button class="btn btn-red" onclick="eliminarSectorBar('${s.id}')">✕</button>
         </div>
         ${subsHtml}
@@ -378,13 +382,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       return `<div class="person-row">
         <span style="font-size:18px">${m.emoji}</span>
         <div class="person-info">
-          <div class="person-name ${m.disponible?"":"off"}">${m.nombre}</div>
+          <div class="person-name ${isDisp(m)?"":"off"}">${m.nombre}</div>
           <div class="restricciones-tags">${restTags}</div>
         </div>
         <div class="person-actions">
           <button class="btn btn-orange" onclick="abrirRestricciones('${m.id}')">🚫</button>
           <button class="btn btn-ghost"  onclick="abrirEdicion('mozo','${m.id}')">✏️</button>
-          <button class="btn ${m.disponible?"btn-gold":"btn-green"}" onclick="toggleMozo('${m.id}',${!m.disponible})">${m.disponible?"Desactivar":"Activar"}</button>
+          <button class="btn ${isDisp(m)?"btn-gold":"btn-green"}" onclick="toggleMozo('${m.id}',${!isDisp(m)})">${isDisp(m)?"Desactivar":"Activar"}</button>
           <button class="btn btn-red" onclick="eliminarMozo('${m.id}')">✕</button>
         </div>
       </div>`;
@@ -397,11 +401,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       : mozosBar.map(m=>`<div class="person-row">
         <span style="font-size:18px">🍸</span>
         <div class="person-info">
-          <div class="person-name ${m.disponible?"":"off"}">${m.nombre}</div>
+          <div class="person-name ${isDisp(m)?"":"off"}">${m.nombre}</div>
         </div>
         <div class="person-actions">
           <button class="btn btn-ghost" onclick="abrirEdicionBar('${m.id}')">✏️</button>
-          <button class="btn ${m.disponible?"btn-gold":"btn-green"}" onclick="toggleMozoBar('${m.id}',${!m.disponible})">${m.disponible?"Desactivar":"Activar"}</button>
+          <button class="btn ${isDisp(m)?"btn-gold":"btn-green"}" onclick="toggleMozoBar('${m.id}',${!isDisp(m)})">${isDisp(m)?"Desactivar":"Activar"}</button>
           <button class="btn btn-red" onclick="eliminarMozoBar('${m.id}')">✕</button>
         </div>
       </div>`).join("");
@@ -415,10 +419,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const canAdd=subs.length<MAX_SS_PER_SECTOR;
       const subsHtml=subs.map((ss,i)=>`
         <div class="ss-cfg-row" style="flex-wrap:wrap">
-          <span class="ss-cfg-name ${ss.disponible?"":"off"}" style="min-width:80px">${ss.nombre}</span>
+          <span class="ss-cfg-name ${isDisp(ss)?"":"off"}" style="min-width:80px">${ss.nombre}</span>
           ${ss.descripcion?`<span style="font-size:10px;color:var(--text3);flex:1;font-style:italic">${ss.descripcion}</span>`:""}
           <button class="btn btn-ghost" onclick="abrirEdicion('subsector','${s.id}',${i})">✏️</button>
-          <button class="btn ${ss.disponible?"btn-gold":"btn-green"}" onclick="toggleSubsector('${s.id}',${i},${!ss.disponible})">${ss.disponible?"Desact.":"Activ."}</button>
+          <button class="btn ${isDisp(ss)?"btn-gold":"btn-green"}" onclick="toggleSubsector('${s.id}',${i},${!isDisp(ss)})">${isDisp(ss)?"Desact.":"Activ."}</button>
           <button class="btn btn-red" onclick="eliminarSubsector('${s.id}',${i})">✕</button>
         </div>`).join("");
       return `<div class="sector-cfg-row" data-id="${s.id}"
@@ -430,11 +434,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         ondragend="onDragEnd(event)">
         <div class="sector-cfg-header" style="flex-wrap:wrap">
           <span class="drag-handle">⠿</span>
-          <span class="sector-cfg-name ${s.disponible?"":"off"}">${s.nombre}</span>
+          <span class="sector-cfg-name ${isDisp(s)?"":"off"}">${s.nombre}</span>
           ${s.descripcion?`<span style="font-size:10px;color:var(--text3);flex:1;font-style:italic">${s.descripcion}</span>`:""}
           <button class="btn btn-ghost" onclick="abrirEdicion('sector','${s.id}')">✏️</button>
           <button class="btn ${s.evitarRepetirSector?"btn-orange":"btn-ghost"}" onclick="toggleEvitarRepetir('${s.id}',${!s.evitarRepetirSector})" title="Evitar repetir sector completo en ciclo siguiente">${s.evitarRepetirSector?"🔒 No repetir sector":"🔓 Permitir repetir"}</button>
-          <button class="btn ${s.disponible?"btn-gold":"btn-green"}" onclick="toggleSector('${s.id}',${!s.disponible})">${s.disponible?"Desact.":"Activ."}</button>
+          <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSector('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
           <button class="btn btn-red" onclick="eliminarSector('${s.id}')">✕</button>
         </div>
         <div class="ss-cfg-list">${subsHtml}</div>
@@ -696,7 +700,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const btn=document.getElementById("btn-rotar");
     const hint=document.getElementById("rotar-hint");
     if(!aviso||!btn) return;
-    const mDisp=mozos.filter(m=>m.disponible);
+    const mDisp=mozos.filter(m=>isDisp(m));
     const slots=getSlots();
     const totalMozos=mDisp.length, totalSlots=slots.length;
 
@@ -732,7 +736,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   window.rotarAutomatico = async function() {
-    const mDisp=mozos.filter(m=>m.disponible);
+    const mDisp=mozos.filter(m=>isDisp(m));
     const slots=getSlots();
 
     // Identificar slots ya asignados manualmente y mozos ya usados
@@ -772,7 +776,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozosUsados=new Set();
 
     // Orden de sectores activos (el orden de la pestaña Sectores define la secuencia de rotación)
-    const sectoresActivos=sectores.filter(s=>s.disponible);
+    const sectoresActivos=sectores.filter(s=>isDisp(s));
     const ordenSectorIds=sectoresActivos.map(s=>s.id);
 
     // IDs de sectores con regla "evitar repetir"
@@ -957,7 +961,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     popupSlotId=slotId;
     const slot=getSlots().find(s=>s.slotId===slotId);
     const label=slot?(slot.ssNombre?`${slot.sectorNombre} › ${slot.ssNombre}`:slot.sectorNombre):slotId;
-    const libres=mozos.filter(m=>m.disponible&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
+    const libres=mozos.filter(m=>isDisp(m)&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
     document.getElementById("popup-title").textContent="Asignar mozo";
     document.getElementById("popup-sub").textContent="📍 "+label;
     const opc=document.getElementById("popup-opciones");
@@ -1082,7 +1086,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const nombre=inp.value.trim();
     if(!nombre) return;
     const maxOrden=sectores.length>0?Math.max(...sectores.map(s=>s.orden??0))+1:0;
-    await addDoc(sectoresCol,{nombre,disponible:true,subsectores:[],orden:maxOrden});
+    await addDoc(sectoresCol,{nombre,[dispKey]:true,subsectores:[],orden:maxOrden});
     inp.value="";
   };
 
@@ -1092,12 +1096,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const nombre=inp.value.trim(); if(!nombre) return;
     const snap=await getDocs(sectoresBarCol);
     const maxOrden=snap.docs.reduce((m,d)=>Math.max(m,d.data().orden||0),0);
-    await addDoc(sectoresBarCol,{nombre,disponible:true,orden:maxOrden+1,subsectores:[]});
+    await addDoc(sectoresBarCol,{nombre,[dispKey]:true,orden:maxOrden+1,subsectores:[]});
     inp.value="";
   };
 
   window.toggleSectorBar = async function(id,disp) {
-    await setDoc(doc(sectoresBarCol,id),{disponible:disp},{merge:true});
+    await setDoc(doc(sectoresBarCol,id),{[dispKey]:disp},{merge:true});
     if(!disp){
       const s=sectoresBar.find(s=>s.id===id);
       const batch=writeBatch(db);
@@ -1119,7 +1123,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const inp=document.getElementById("nuevo-ss-bar-"+sectorId);
     const nombre=inp?.value.trim(); if(!nombre) return;
     const s=sectoresBar.find(s=>s.id===sectorId); if(!s) return;
-    const subs=[...(s.subsectores||[]),{id:"ss"+Date.now(),nombre,disponible:true,descripcion:""}];
+    const subs=[...(s.subsectores||[]),{id:"ss"+Date.now(),nombre,[dispKey]:true,descripcion:""}];
     await setDoc(doc(sectoresBarCol,sectorId),{subsectores:subs},{merge:true});
     inp.value="";
   };
@@ -1127,7 +1131,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.toggleSubsectorBar = async function(sectorId,ssIdx,disp) {
     const s=sectoresBar.find(s=>s.id===sectorId); if(!s) return;
     const subs=[...(s.subsectores||[])];
-    subs[ssIdx]={...subs[ssIdx],disponible:disp};
+    subs[ssIdx]={...subs[ssIdx],[dispKey]:disp};
     if(!disp) await deleteDoc(doc(asigCol,"bar_"+sectorId+"___"+subs[ssIdx].id));
     await setDoc(doc(sectoresBarCol,sectorId),{subsectores:subs},{merge:true});
   };
@@ -1154,7 +1158,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   };
 
   window.toggleSector = async function(id,disp) {
-    await setDoc(doc(sectoresCol,id),{disponible:disp},{merge:true});
+    await setDoc(doc(sectoresCol,id),{[dispKey]:disp},{merge:true});
     if(!disp){
       // Liberar todos los subsectores de este sector
       const s=sectores.find(s=>s.id===id);
@@ -1185,7 +1189,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const s=sectores.find(s=>s.id===sectorId);
     const subs=[...(s.subsectores||[])];
     if(subs.length>=MAX_SS_PER_SECTOR) return;
-    subs.push({id:"ss"+Date.now(),nombre,disponible:true});
+    subs.push({id:"ss"+Date.now(),nombre,[dispKey]:true});
     await setDoc(doc(sectoresCol,sectorId),{subsectores:subs},{merge:true});
     inp.value="";
   };
@@ -1193,7 +1197,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const s=sectores.find(s=>s.id===sectorId);
     const subs=[...(s.subsectores||[])];
     const ssId=subs[idx].id;
-    subs[idx]={...subs[idx],disponible:disp};
+    subs[idx]={...subs[idx],[dispKey]:disp};
     await setDoc(doc(sectoresCol,sectorId),{subsectores:subs},{merge:true});
     if(!disp) await deleteDoc(doc(asigCol,sectorId+"___"+ssId));
   };
@@ -1212,7 +1216,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   // ===================== MOZOS CRUD =====================
   window.toggleMozo = async function(id,disp) {
-    await setDoc(doc(mozosCol,id),{disponible:disp},{merge:true});
+    await setDoc(doc(mozosCol,id),{[dispKey]:disp},{merge:true});
     if(!disp) for(const [slotId,a] of Object.entries(asignaciones)) if(a.mozoId===id) await deleteDoc(doc(asigCol,slotId));
   };
   window.eliminarMozo = async function(id) {
@@ -1225,7 +1229,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const nombre=inp.value.trim();
     if(!nombre) return;
     const emojis=["👨‍🍳","👩‍🍳","🧑‍🍳"];
-    await addDoc(mozosCol,{nombre,emoji:emojis[mozos.length%3],disponible:true,restricciones:[]});
+    await addDoc(mozosCol,{nombre,emoji:emojis[mozos.length%3],[dispKey]:true,restricciones:[]});
     inp.value="";
   };
 
@@ -1233,12 +1237,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const inp=document.getElementById("nuevo-mozo-bar");
     const nombre=inp.value.trim();
     if(!nombre) return;
-    await addDoc(barraCol,{nombre,disponible:true});
+    await addDoc(barraCol,{nombre,[dispKey]:true});
     inp.value="";
   };
 
   window.toggleMozoBar = async function(id,disp) {
-    await setDoc(doc(barraCol,id),{disponible:disp},{merge:true});
+    await setDoc(doc(barraCol,id),{[dispKey]:disp},{merge:true});
   };
 
   window.eliminarMozoBar = async function(id) {
@@ -1265,7 +1269,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   // Popup de asignación para sectores de barra
   window.chipBarClick = function(slotId) {
     if(asignaciones[slotId]) return;
-    const barDisp=mozosBar.filter(m=>m.disponible);
+    const barDisp=mozosBar.filter(m=>isDisp(m));
     if(barDisp.length===0){alert("No hay mozos de barra activos. Agregalos en la pestaña 🍸 Barra.");return;}
     const sl=getSlotsBar().find(s=>s.slotId===slotId);
     const label=sl?`${sl.sectorNombre} › ${sl.ssNombre}`:slotId;
@@ -1348,8 +1352,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     let html = "";
 
     // Sectores normales — mismo orden que la grilla de operación, agrupados por sector
-    sectores.filter(s=>s.disponible).forEach(s=>{
-      const subs = (s.subsectores||[]).filter(ss=>ss.disponible);
+    sectores.filter(s=>isDisp(s)).forEach(s=>{
+      const subs = (s.subsectores||[]).filter(ss=>isDisp(ss));
 
       // Sector label
       html += `<div class="pres-sector-label">${s.nombre}</div>`;
@@ -1372,11 +1376,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     });
 
     // Sectores de barra
-    const hasBarSlotsAsig = sectoresBar.filter(s=>s.disponible).some(s=>(s.subsectores||[]).filter(ss=>ss.disponible).length>0);
+    const hasBarSlotsAsig = sectoresBar.filter(s=>isDisp(s)).some(s=>(s.subsectores||[]).filter(ss=>isDisp(ss)).length>0);
     if(hasBarSlotsAsig){
       html += `<div class="pres-sector-label" style="color:#5a8fa0;border-color:#5a8fa0">🍸 Barra</div>`;
-      sectoresBar.filter(s=>s.disponible).forEach(s=>{
-        const subs = (s.subsectores||[]).filter(ss=>ss.disponible);
+      sectoresBar.filter(s=>isDisp(s)).forEach(s=>{
+        const subs = (s.subsectores||[]).filter(ss=>isDisp(ss));
         if(subs.length === 0) return;
         html += `<div class="pres-sector-label pres-sector-label-sub">${s.nombre}</div>`;
         html += `<div class="pres-sector-row">`;
