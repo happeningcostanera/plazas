@@ -1343,7 +1343,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const turnoIcon = turno==="noche" ? "🌙" : "🌅";
     const turnoLabel = TURNO_NOMBRES[turno] || "Mañana";
     titulo.textContent = turnoIcon + " Rotación " + turnoLabel + " — " + new Date().toLocaleDateString("es-AR", {weekday:"long",day:"2-digit",month:"long"});
-    fecha.textContent = new Date().toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit"}) + " hs";
+    fecha.textContent = new Date().toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",hour12:false}) + " hs";
 
     let html = "";
 
