@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1008" />
+  <title>Ayuda — Sistemalf Plaza</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="img/Favicon.png" />
+  <style>
+    :root {
+      --bg: #0f0b06;
+      --bg2: #1a1008;
+      --bg3: #241a0e;
+      --text: #e8dcc8;
+      --text2: #bfa97a;
+      --text3: #7a5a30;
+      --gold: #c9933a;
+      --gold2: #e8b866;
+      --orange: #b05a10;
+      --border: #2a1e10;
+      --border2: #3a2a12;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border2);
+    }
+    .header img { height: 32px; opacity: .8; }
+    .header h1 { font-size: 20px; color: var(--gold2); font-weight: 700; }
+    .header small { font-size: 12px; color: var(--text3); }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--gold);
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    .section {
+      margin-bottom: 8px;
+    }
+    .section-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .section-btn:hover { background: var(--bg3); }
+    .section-btn .icon { font-size: 18px; margin-right: 10px; }
+    .section-btn .arrow {
+      font-size: 12px;
+      color: var(--text3);
+      transition: transform .2s;
+    }
+    .section.open .section-btn {
+      border-radius: 10px 10px 0 0;
+      border-bottom-color: transparent;
+      background: var(--bg3);
+    }
+    .section.open .arrow { transform: rotate(90deg); }
+    .section-body {
+      display: none;
+      padding: 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+    }
+    .section.open .section-body { display: block; }
+
+    .step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      min-width: 26px;
+      height: 26px;
+      background: rgba(201,147,58,.15);
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold2);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-text { font-size: 14px; color: var(--text); }
+    .step-text strong { color: var(--gold2); font-weight: 600; }
+    .step-text .subtle { color: var(--text3); font-size: 12px; }
+
+    .tip {
+      background: rgba(60,120,150,.1);
+      border: 1px solid rgba(90,143,160,.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #90cfe0;
+      margin-top: 12px;
+    }
+    .tip::before { content: "💡 "; }
+
+    .warn {
+      background: rgba(176,90,16,.1);
+      border: 1px solid rgba(176,90,16,.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #f0a060;
+      margin-top: 12px;
+    }
+    .warn::before { content: "⚠️ "; }
+
+    .divider {
+      height: 1px;
+      background: var(--border2);
+      margin: 12px 0;
+    }
+
+    h3 {
+      font-size: 14px;
+      color: var(--gold2);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    p { font-size: 14px; margin-bottom: 10px; }
+    p:last-child { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a class="back-link" href="javascript:history.back()">← Volver a la app</a>
+  <div class="header">
+    <img src="img/Logo.png" alt="Logo" />
+    <div>
+      <h1>Manual de uso</h1>
+      <small>Sistemalf Plaza — Rotación de mozos</small>
+    </div>
+  </div>
+
+  <!-- CONCEPTOS -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">📖</span>Conceptos básicos</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Cada restaurante tiene <strong>dos turnos</strong>: Mañana y Noche. Cada uno tiene su propio link.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Los <strong>mozos</strong> y los <strong>salones</strong> (sectores) son compartidos entre ambos turnos.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">La <strong>rotación</strong> y el <strong>historial</strong> son independientes por turno.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Una <strong>plaza</strong> es un sub sector dentro de un salón. Cada plaza se asigna a un mozo.</div>
+      </div>
+      <div class="tip">Usá el link de tu turno directamente. No hace falta pasar por la pantalla de selección.</div>
+    </div>
+  </div>
+
+  <!-- PERSONAL -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">👥</span>Personal</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <h3>Agregar un mozo</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Ir a la pestaña <strong>Personal</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Escribir el nombre en el campo y tocar <strong>+ Agregar</strong>.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Activar / desactivar</h3>
+      <p>Cada mozo tiene un <strong>switch</strong> para activarlo o desactivarlo. Solo los mozos activos participan de la rotación.</p>
+
+      <div class="divider"></div>
+      <h3>Editar nombre</h3>
+      <p>Mantené presionado sobre el mozo (press largo) para abrir el editor de nombre.</p>
+
+      <div class="divider"></div>
+      <h3>Restricciones</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Tocar el botón <strong>🚫</strong> junto al mozo.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Marcar las plazas donde ese mozo <strong>no puede</strong> ser asignado (por limitaciones físicas, preferencias, etc.).</div>
+      </div>
+      <div class="tip">Las restricciones se respetan tanto en la rotación automática como en la asignación manual.</div>
+
+      <div class="divider"></div>
+      <h3>Eliminar un mozo</h3>
+      <p>Tocar el botón <strong>🗑️</strong> junto al mozo y confirmar.</p>
+      <div class="warn">Eliminar un mozo no borra su historial. Los registros anteriores se mantienen.</div>
+
+      <div class="divider"></div>
+      <h3>Mozos de barra</h3>
+      <p>Se gestionan igual que los mozos de salón, pero en la sección <strong>Mozos de Barra</strong> dentro de la misma pestaña.</p>
+    </div>
+  </div>
+
+  <!-- SALON -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">🗺️</span>Salón (Sectores)</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <h3>Crear un sector</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Ir a la pestaña <strong>Salón</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Escribir el nombre del sector (ej: "Salón 1", "Terraza") y tocar <strong>+ Agregar</strong>.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Agregar plazas (sub sectores)</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Dentro de cada sector, usar el campo para agregar plazas.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Cada plaza representa un puesto que se asigna a un mozo.</div>
+      </div>
+      <div class="tip">Máximo 5 plazas por sector.</div>
+
+      <div class="divider"></div>
+      <h3>Activar / desactivar</h3>
+      <p>Tanto sectores como plazas tienen un <strong>switch</strong>. Solo las plazas activas participan de la rotación.</p>
+
+      <div class="divider"></div>
+      <h3>Orden de los sectores</h3>
+      <p>El orden en que aparecen los sectores define la <strong>secuencia de rotación</strong>. Usá las flechas <strong>↑ ↓</strong> para reordenar.</p>
+      <div class="warn">El orden es importante: la rotación avanza al siguiente sector en la lista.</div>
+
+      <div class="divider"></div>
+      <h3>Evitar repetir sector</h3>
+      <p>Si un sector tiene activada esta opción, la rotación intentará no asignar al mismo mozo en el mismo sector dos veces seguidas.</p>
+
+      <div class="divider"></div>
+      <h3>Editar y eliminar</h3>
+      <p>Press largo para editar nombre. Botón 🗑️ para eliminar.</p>
+    </div>
+  </div>
+
+  <!-- ROTACION -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">⚡</span>Nueva Plaza (Rotación)</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <h3>Rotación automática</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Ir a la pestaña <strong>Nueva Plaza</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Verificar que el aviso diga <strong>"Listo para rotar"</strong>. Esto significa que hay la misma cantidad de mozos activos que plazas.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Tocar <strong>⚡ ROTAR AHORA</strong>. El sistema asigna automáticamente cada mozo a una plaza.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Aparece un <strong>banner amarillo</strong> abajo. Revisá la asignación.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">Si estás conforme, tocá <strong>Confirmar</strong> en el banner. Si no, podés modificar manualmente antes de confirmar.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Asignación manual previa</h3>
+      <p>Si necesitás que un mozo vaya a una plaza específica (situación especial), asignalo <strong>antes</strong> de rotar. La rotación respeta las asignaciones manuales y distribuye el resto.</p>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Tocar una plaza vacía en el mapa de sectores.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Elegir el mozo del popup.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Luego tocar <strong>⚡ ROTAR AHORA</strong>. Las plazas pre-asignadas no se tocan.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Modificar después de rotar</h3>
+      <p>Mientras el banner esté visible (antes de confirmar), podés tocar cualquier plaza para liberar o reasignar.</p>
+
+      <div class="divider"></div>
+      <h3>Editar una formación confirmada</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Después de confirmar aparecen tres botones: <strong>Editar</strong>, <strong>PDF</strong> y <strong>Pantalla</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Tocar <strong>Editar</strong> para desbloquear la formación.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Hacé los cambios y volvé a <strong>Confirmar</strong>. El historial se actualiza.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Liberar todo</h3>
+      <p>El botón <strong>🔓 Liberar todo</strong> vacía todas las plazas. Está siempre disponible.</p>
+
+      <div class="divider"></div>
+      <h3>Lógica de la rotación</h3>
+      <p>El sistema busca que cada mozo <strong>avance al siguiente sector</strong> en el orden configurado. Además considera:</p>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Cuántas veces estuvo cada mozo en cada plaza (equilibrar).</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">La opción "evitar repetir sector" si está activada.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Las restricciones de cada mozo.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Las asignaciones manuales previas.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">🍸</span>Barra</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <p>La barra funciona de forma independiente a los sectores de salón.</p>
+
+      <div class="divider"></div>
+      <h3>Sectores de barra</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">En la pestaña <strong>Barra</strong>, agregar sectores de barra (ej: "Barra principal", "Barra terraza").</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Asignar mozos de barra tocando cada sector.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Mozos de barra</h3>
+      <p>Se agregan desde la pestaña <strong>Personal</strong>, en la sección "Mozos de Barra". Funcionan igual que los mozos de salón pero se asignan solo a sectores de barra.</p>
+    </div>
+  </div>
+
+  <!-- PLAZAS (ROTACIONES) -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">🔄</span>Plazas (Rotaciones anteriores)</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <p>Muestra las rotaciones confirmadas en formato de <strong>tarjetas visuales</strong>.</p>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Cada tarjeta muestra una rotación completa: fecha, hora y la asignación de cada mozo por sector.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Usá los botones <strong>← Anterior</strong> y <strong>Siguiente →</strong> para navegar entre rotaciones.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">La primera tarjeta siempre es la <strong>última rotación</strong> (la más reciente).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">📋</span>Historial</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <h3>Resumen por mozo</h3>
+      <p>Tabla que muestra cuántas veces estuvo cada mozo en cada plaza. Sirve para verificar que la distribución sea equitativa.</p>
+
+      <div class="divider"></div>
+      <h3>Filtros</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Filtro por mozo:</strong> seleccionar un mozo para ver solo sus registros.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Filtro por fecha:</strong> seleccionar una fecha para ver solo ese día.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Tocar <strong>✕ Limpiar</strong> para quitar los filtros.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Registros</h3>
+      <p>Lista detallada de cada asignación: hora, fecha, mozo, sector y plaza. El número <strong>#</strong> muestra cuántas veces ese mozo estuvo en esa plaza en total.</p>
+    </div>
+  </div>
+
+  <!-- PDF Y PANTALLA -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">📄</span>PDF y Pantalla</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <h3>Descargar PDF</h3>
+      <p>Después de confirmar una rotación, el botón <strong>PDF</strong> genera un documento con la formación actual para imprimir o compartir.</p>
+
+      <div class="divider"></div>
+      <h3>Ver en pantalla</h3>
+      <p>El botón <strong>Pantalla</strong> abre una vista a pantalla completa con la formación. Ideal para mostrar en un monitor o TV del restaurante.</p>
+      <div class="tip">Tocá "✕ Salir" abajo a la derecha para volver a la app.</div>
+    </div>
+  </div>
+
+  <!-- TIPS -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">✨</span>Tips y buenas prácticas</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Mantené la <strong>misma cantidad</strong> de mozos activos que plazas activas para que la rotación funcione sin problemas.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Si un mozo no viene, <strong>desactivalo</strong> en vez de eliminarlo. Así conservás su historial.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Usá las <strong>restricciones</strong> para que el sistema no asigne a un mozo donde no corresponde.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Si necesitás forzar una posición, <strong>asigná manualmente antes de rotar</strong>. La rotación respeta esas asignaciones.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">Revisá el <strong>resumen por mozo</strong> periódicamente para verificar que la distribución sea justa.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-text">El <strong>orden de los sectores</strong> en la pestaña Salón define hacia dónde avanza la rotación. Configuralo una vez y no lo cambies seguido.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggle(btn) {
+  btn.closest('.section').classList.toggle('open');
+}
+</script>
+</body>
+</html>
