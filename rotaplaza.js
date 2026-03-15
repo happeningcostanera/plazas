@@ -921,9 +921,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     ultimaRotacionHistIds=newRefs;
     pendingHistorial=[];
     formacionBloqueada=true;
-    document.getElementById("btn-pdf").style.display="block";
-    document.getElementById("btn-presentacion").style.display="block";
-    document.getElementById("btn-editar-formacion").style.display="block";
+    document.getElementById("acciones-formacion").style.display="flex";
     ocultarBannerPendiente();
     renderAll();
   };
@@ -944,9 +942,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     // Desbloquear y mostrar banner
     formacionBloqueada=false;
-    document.getElementById("btn-editar-formacion").style.display="none";
-    document.getElementById("btn-pdf").style.display="none";
-    document.getElementById("btn-presentacion").style.display="none";
+    document.getElementById("acciones-formacion").style.display="none";
     mostrarBannerPendiente();
     renderAll();
   };
@@ -1008,9 +1004,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     pendingHistorial=[];
     ultimaRotacionHistIds=[];
     formacionBloqueada=false;
-    document.getElementById("btn-editar-formacion").style.display="none";
-    document.getElementById("btn-pdf").style.display="none";
-    document.getElementById("btn-presentacion").style.display="none";
+    document.getElementById("acciones-formacion").style.display="none";
     ocultarBannerPendiente();
   };
 
@@ -1493,9 +1487,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     ocultarBannerPendiente();
     // Si estaba editando, volver a mostrar los botones post-confirmación
     if(estaEditando){
-      document.getElementById("btn-editar-formacion").style.display="block";
-      document.getElementById("btn-pdf").style.display="block";
-      document.getElementById("btn-presentacion").style.display="block";
+      document.getElementById("acciones-formacion").style.display="flex";
     }
   };
 

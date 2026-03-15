@@ -51,9 +51,11 @@
         <div class="section-title">🔄 Rotación automática</div>
         <div id="rotar-aviso" style="display:none;margin-bottom:12px"></div>
         <button class="btn-rotar" id="btn-rotar" onclick="rotarAutomatico()">⚡ ROTAR AHORA</button>
-        <button id="btn-editar-formacion" onclick="editarFormacion()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid var(--orange);background:rgba(176,90,16,.12);color:#f0a060;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">✏️ Editar formación</button>
-        <button id="btn-pdf" onclick="generarPDF()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid var(--gold);background:rgba(201,147,58,.12);color:var(--gold2);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px">📄 Descargar PDF</button>
-        <button id="btn-presentacion" onclick="abrirPresentacion()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1px solid #5a8fa0;background:rgba(60,120,150,.15);color:#90cfe0;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px">📺 Ver en pantalla</button>
+        <div id="acciones-formacion" style="display:none;display:none;gap:8px;margin-bottom:10px">
+          <button id="btn-editar-formacion" onclick="editarFormacion()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--orange);background:rgba(176,90,16,.12);color:#f0a060;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">✏️ Editar</button>
+          <button id="btn-pdf" onclick="generarPDF()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--gold);background:rgba(201,147,58,.12);color:var(--gold2);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">📄 PDF</button>
+          <button id="btn-presentacion" onclick="abrirPresentacion()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #5a8fa0;background:rgba(60,120,150,.15);color:#90cfe0;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">📺 Pantalla</button>
+        </div>
         <p id="rotar-hint" style="font-size:11px;color:var(--text3);text-align:center">Asigna mozos a todos los slots activos — confirmá cuando estés conforme</p>
       </div>
       <div class="section">
