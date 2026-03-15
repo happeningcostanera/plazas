@@ -713,7 +713,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     }
     if(totalMozos===0||totalSlots===0){
       aviso.style.display="block";hint.style.display="none";
-      aviso.innerHTML=`<div class="aviso error"><strong>⛔ Sin mozos o sub sectores activos</strong>Activá mozos en Personal y sub sectores en Sectores.</div>`;
+      aviso.innerHTML=`<div class="aviso error"><strong>⛔ Sin mozos o plazas</strong>Activá mozos en Personal y plazas en Salón.</div>`;
       btn.disabled=true;btn.style.opacity=".4";return;
     }
     hint.style.display="block";aviso.style.display="block";
@@ -721,13 +721,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const infoPreAsig=preAsig>0?` (${preAsig} ya asignado${preAsig>1?"s":""})`:"";
     if(nLibres===pLibres){
       btn.disabled=false;btn.style.opacity="1";
-      aviso.innerHTML=`<div class="aviso info"><strong>✅ Listo para rotar</strong>${nLibres} mozo${nLibres>1?"s":""} · ${pLibres} sub sector${pLibres>1?"es":""}${infoPreAsig}.</div>`;
+      aviso.innerHTML=`<div class="aviso info"><strong>✅ Listo para rotar</strong>${nLibres} mozo${nLibres>1?"s":""} · ${pLibres} plaza${pLibres>1?"s":""}${infoPreAsig}.</div>`;
     } else if(nLibres<pLibres){
       btn.disabled=true;btn.style.opacity=".4";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Menos mozos libres que sub sectores libres</strong>${nLibres} mozo${nLibres>1?"s":""} para ${pLibres} sub sectores${infoPreAsig}. Ajustá en Personal o Sectores.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Menos mozos que plazas</strong>${nLibres} mozo${nLibres>1?"s":""} para ${pLibres} plazas${infoPreAsig}. Ajustá en Mozos o Plazas.</div>`;
     } else {
       btn.disabled=true;btn.style.opacity=".4";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Más mozos libres que sub sectores libres</strong>${nLibres} mozos para ${pLibres} sub sectores${infoPreAsig}. Ajustá en Personal o Sectores.</div>`;
+      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Más mozos que Plazas</strong>${nLibres} mozos para ${pLibres} plazas${infoPreAsig}. Ajustá en Mozos o Plazas.</div>`;
     }
   }
 
