@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1a1008" />
-  <title>Ayuda — Sistemalf Plaza</title>
+  <title>Ayuda — SistemAlf Plaza</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="img/Favicon.png" />
   <style>
@@ -167,7 +167,7 @@
     <img src="img/Logo.png" alt="Logo" />
     <div>
       <h1>Manual de uso</h1>
-      <small>Sistemalf Plaza — Rotación de mozos</small>
+      <small>SistemAlf Plaza — Rotación de mozos</small>
     </div>
   </div>
 
@@ -180,11 +180,11 @@
     <div class="section-body">
       <div class="step">
         <div class="step-num">1</div>
-        <div class="step-text">Cada restaurante tiene <strong>dos turnos</strong>: Mañana y Noche. Cada uno tiene su propio link.</div>
+        <div class="step-text">Cada restaurante tiene <strong>dos turnos</strong>: Mañana y Noche. Cada uno con su propio link.</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-text">Los <strong>mozos</strong> y los <strong>salones</strong> (sectores) son compartidos entre ambos turnos.</div>
+        <div class="step-text">Los <strong>mozos</strong> y los <strong>sectores</strong> son compartidos entre ambos turnos.</div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
@@ -192,9 +192,13 @@
       </div>
       <div class="step">
         <div class="step-num">4</div>
-        <div class="step-text">Una <strong>plaza</strong> es un sub sector dentro de un salón. Cada plaza se asigna a un mozo.</div>
+        <div class="step-text">Los mozos y sectores <strong>activos</strong> también son independientes por turno: activar o desactivar un mozo en Mañana no afecta al turno Noche.</div>
       </div>
-      <div class="tip">Usá el link de tu turno directamente. No hace falta pasar por la pantalla de selección.</div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">Una <strong>plaza</strong> es un sub sector dentro de un sector. Cada plaza se asigna a un mozo.</div>
+      </div>
+      <div class="tip">Usar el link del turno correspondiente directamente. No es necesario pasar por la pantalla de selección.</div>
     </div>
   </div>
 
@@ -217,11 +221,11 @@
 
       <div class="divider"></div>
       <h3>Activar / desactivar</h3>
-      <p>Cada mozo tiene un <strong>switch</strong> para activarlo o desactivarlo. Solo los mozos activos participan de la rotación.</p>
+      <p>Cada mozo tiene un <strong>switch</strong> para activar o desactivar. Solo los mozos activos participan de la rotación. El estado es independiente por turno.</p>
 
       <div class="divider"></div>
       <h3>Editar nombre</h3>
-      <p>Mantené presionado sobre el mozo (press largo) para abrir el editor de nombre.</p>
+      <p>Mantener presionado sobre el mozo (press largo) para abrir el editor de nombre.</p>
 
       <div class="divider"></div>
       <h3>Restricciones</h3>
@@ -242,7 +246,7 @@
 
       <div class="divider"></div>
       <h3>Mozos de barra</h3>
-      <p>Se gestionan igual que los mozos de salón, pero en la sección <strong>Mozos de Barra</strong> dentro de la misma pestaña.</p>
+      <p>Agregar y gestionar de la misma forma que los mozos de salón, pero en la sección <strong>Mozos de Barra</strong> dentro de la misma pestaña.</p>
     </div>
   </div>
 
@@ -271,26 +275,39 @@
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-text">Cada plaza representa un puesto que se asigna a un mozo.</div>
+        <div class="step-text">Cada plaza representa un puesto a asignar a un mozo.</div>
       </div>
-      <div class="tip">Máximo 5 plazas por sector.</div>
+      <div class="tip">Máximo 12 plazas por sector.</div>
 
       <div class="divider"></div>
       <h3>Activar / desactivar</h3>
-      <p>Tanto sectores como plazas tienen un <strong>switch</strong>. Solo las plazas activas participan de la rotación.</p>
+      <p>Tanto sectores como plazas tienen un <strong>switch</strong> para activar o desactivar. Solo las plazas activas participan de la rotación. El estado es independiente por turno.</p>
 
       <div class="divider"></div>
       <h3>Orden de los sectores</h3>
-      <p>El orden en que aparecen los sectores define la <strong>secuencia de rotación</strong>. Usá las flechas <strong>↑ ↓</strong> para reordenar.</p>
-      <div class="warn">El orden es importante: la rotación avanza al siguiente sector en la lista.</div>
+      <p>El orden en que aparecen los sectores define la <strong>secuencia de rotación</strong>. Arrastrar con el ícono <strong>⠿</strong> para reordenar.</p>
+      <div class="warn">El orden es importante: la rotación avanza al siguiente sector (o grupo) en la lista.</div>
+
+      <div class="divider"></div>
+      <h3>Grupos de sectores</h3>
+      <p>Asignar el mismo <strong>grupo</strong> a varios sectores para que la rotación los trate como una sola unidad.</p>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">En la configuración de cada sector, seleccionar un grupo existente o crear uno nuevo.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Todos los sectores con el mismo grupo funcionan como un solo sector para el avance y la regla de "no repetir".</div>
+      </div>
+      <div class="tip">Útil para sectores grandes divididos en partes (ej: Deck A, Deck B, Deck C con grupo "Deck"). Visualmente son 3 sectores, pero la rotación los trata como uno.</div>
 
       <div class="divider"></div>
       <h3>Evitar repetir sector</h3>
-      <p>Si un sector tiene activada esta opción, la rotación intentará no asignar al mismo mozo en el mismo sector dos veces seguidas.</p>
+      <p>Si un sector tiene activada esta opción, la rotación intentar no asignar al mismo mozo en el mismo sector (o grupo) dos veces seguidas.</p>
 
       <div class="divider"></div>
       <h3>Editar y eliminar</h3>
-      <p>Press largo para editar nombre. Botón 🗑️ para eliminar.</p>
+      <p>Mantener presionado para editar nombre. Tocar 🗑️ para eliminar.</p>
     </div>
   </div>
 
@@ -301,47 +318,47 @@
       <span class="arrow">▶</span>
     </button>
     <div class="section-body">
-      <h3>Rotación automática</h3>
+      <h3>Generar una plaza</h3>
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-text">Ir a la pestaña <strong>Nueva Plaza</strong>.</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-text">Verificar que el aviso diga <strong>"Listo para rotar"</strong>. Esto significa que hay la misma cantidad de mozos activos que plazas.</div>
+        <div class="step-text">Verificar que el aviso diga <strong>"Listo para rotar"</strong>. Esto indica que la cantidad de mozos activos coincide con la de plazas.</div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-text">Tocar <strong>⚡ Generar Plaza</strong>. El sistema asigna automáticamente cada mozo a una plaza.</div>
+        <div class="step-text">Tocar <strong>⚡ Generar Plaza</strong>. El sistema asignar automáticamente cada mozo a una plaza.</div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
-        <div class="step-text">Aparece un <strong>banner amarillo</strong> abajo. Revisá la asignación.</div>
+        <div class="step-text">Revisar la asignación. Aparece un <strong>banner amarillo</strong> en la parte inferior.</div>
       </div>
       <div class="step">
         <div class="step-num">5</div>
-        <div class="step-text">Si estás conforme, tocá <strong>Confirmar</strong> en el banner. Si no, podés modificar manualmente antes de confirmar.</div>
+        <div class="step-text">Si la asignación es correcta, tocar <strong>Confirmar</strong> en el banner. Si no, modificar manualmente antes de confirmar.</div>
       </div>
 
       <div class="divider"></div>
-      <h3>Asignación manual previa</h3>
-      <p>Si necesitás que un mozo vaya a una plaza específica (situación especial), asignalo <strong>antes</strong> de rotar. La rotación respeta las asignaciones manuales y distribuye el resto.</p>
+      <h3>Asignar manualmente antes de rotar</h3>
+      <p>Para forzar a un mozo en una plaza específica (situación especial), asignar <strong>antes</strong> de generar la plaza. La rotación respetar las asignaciones previas y distribuir el resto.</p>
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-text">Tocar una plaza vacía en el mapa de sectores.</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-text">Elegir el mozo del popup.</div>
+        <div class="step-text">Elegir el mozo en el popup.</div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-text">Luego tocar <strong>⚡ Generar Plaza</strong>. Las plazas pre-asignadas no se tocan.</div>
+        <div class="step-text">Luego tocar <strong>⚡ Generar Plaza</strong>. Las plazas pre-asignadas no se modifican.</div>
       </div>
 
       <div class="divider"></div>
-      <h3>Modificar después de rotar</h3>
-      <p>Mientras el banner esté visible (antes de confirmar), podés tocar cualquier plaza para liberar o reasignar.</p>
+      <h3>Modificar después de generar</h3>
+      <p>Mientras el banner esté visible (antes de confirmar), tocar cualquier plaza para liberar o reasignar.</p>
 
       <div class="divider"></div>
       <h3>Editar una formación confirmada</h3>
@@ -355,19 +372,19 @@
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-text">Hacé los cambios y volvé a <strong>Confirmar</strong>. El historial se actualiza.</div>
+        <div class="step-text">Realizar los cambios y volver a tocar <strong>Confirmar</strong>. El historial se actualiza con la nueva formación.</div>
       </div>
 
       <div class="divider"></div>
       <h3>Liberar todo</h3>
-      <p>El botón <strong>🔓 Liberar todo</strong> vacía todas las plazas. Está siempre disponible.</p>
+      <p>El botón <strong>🔓 Liberar todo</strong> vaciar todas las plazas. Está siempre disponible.</p>
 
       <div class="divider"></div>
       <h3>Lógica de la rotación</h3>
-      <p>El sistema busca que cada mozo <strong>avance al siguiente sector</strong> en el orden configurado. Además considera:</p>
+      <p>El sistema buscar que cada mozo <strong>avance al siguiente sector</strong> (o grupo) en el orden configurado. Además considerar:</p>
       <div class="step">
         <div class="step-num">•</div>
-        <div class="step-text">Cuántas veces estuvo cada mozo en cada plaza (equilibrar).</div>
+        <div class="step-text">Cantidad de veces que cada mozo estuvo en cada plaza (para equilibrar).</div>
       </div>
       <div class="step">
         <div class="step-num">•</div>
@@ -381,6 +398,10 @@
         <div class="step-num">•</div>
         <div class="step-text">Las asignaciones manuales previas.</div>
       </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Los grupos de sectores (sectores agrupados se tratan como uno).</div>
+      </div>
     </div>
   </div>
 
@@ -391,7 +412,7 @@
       <span class="arrow">▶</span>
     </button>
     <div class="section-body">
-      <p>La barra funciona de forma independiente a los sectores de salón.</p>
+      <p>La barra funcionar de forma independiente a los sectores de salón.</p>
 
       <div class="divider"></div>
       <h3>Sectores de barra</h3>
@@ -406,7 +427,7 @@
 
       <div class="divider"></div>
       <h3>Mozos de barra</h3>
-      <p>Se agregan desde la pestaña <strong>Personal</strong>, en la sección "Mozos de Barra". Funcionan igual que los mozos de salón pero se asignan solo a sectores de barra.</p>
+      <p>Agregar desde la pestaña <strong>Personal</strong>, en la sección "Mozos de Barra". Funcionan igual que los mozos de salón pero se asignan solo a sectores de barra.</p>
     </div>
   </div>
 
@@ -417,14 +438,14 @@
       <span class="arrow">▶</span>
     </button>
     <div class="section-body">
-      <p>Muestra las rotaciones confirmadas en formato de <strong>tarjetas visuales</strong>.</p>
+      <p>Mostrar las rotaciones confirmadas en formato de <strong>tarjetas visuales</strong>.</p>
       <div class="step">
         <div class="step-num">1</div>
-        <div class="step-text">Cada tarjeta muestra una rotación completa: fecha, hora y la asignación de cada mozo por sector.</div>
+        <div class="step-text">Cada tarjeta mostrar una rotación completa: fecha, hora y la asignación de cada mozo por sector.</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-text">Usá los botones <strong>← Anterior</strong> y <strong>Siguiente →</strong> para navegar entre rotaciones.</div>
+        <div class="step-text">Usar los botones <strong>← Anterior</strong> y <strong>Siguiente →</strong> para navegar entre rotaciones.</div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
@@ -441,7 +462,7 @@
     </button>
     <div class="section-body">
       <h3>Resumen por mozo</h3>
-      <p>Tabla que muestra cuántas veces estuvo cada mozo en cada plaza. Sirve para verificar que la distribución sea equitativa.</p>
+      <p>Tabla que mostrar cuántas veces estuvo cada mozo en cada plaza. Útil para verificar que la distribución sea equitativa.</p>
 
       <div class="divider"></div>
       <h3>Filtros</h3>
@@ -460,7 +481,7 @@
 
       <div class="divider"></div>
       <h3>Registros</h3>
-      <p>Lista detallada de cada asignación: hora, fecha, mozo, sector y plaza. El número <strong>#</strong> muestra cuántas veces ese mozo estuvo en esa plaza en total.</p>
+      <p>Lista detallada de cada asignación: hora, fecha, mozo, sector y plaza. El número <strong>#</strong> indicar cuántas veces ese mozo estuvo en esa plaza en total.</p>
     </div>
   </div>
 
@@ -472,12 +493,12 @@
     </button>
     <div class="section-body">
       <h3>Descargar PDF</h3>
-      <p>Después de confirmar una rotación, el botón <strong>PDF</strong> genera un documento con la formación actual para imprimir o compartir.</p>
+      <p>Después de confirmar una rotación, tocar el botón <strong>PDF</strong> para generar un documento con la formación actual. Útil para imprimir o compartir.</p>
 
       <div class="divider"></div>
       <h3>Ver en pantalla</h3>
-      <p>El botón <strong>Pantalla</strong> abre una vista a pantalla completa con la formación. Ideal para mostrar en un monitor o TV del restaurante.</p>
-      <div class="tip">Tocá "✕ Salir" abajo a la derecha para volver a la app.</div>
+      <p>Tocar el botón <strong>Pantalla</strong> para abrir una vista a pantalla completa con la formación. Ideal para mostrar en un monitor o TV del restaurante.</p>
+      <div class="tip">Tocar "✕ Salir" abajo a la derecha para volver a la app.</div>
     </div>
   </div>
 
@@ -490,27 +511,31 @@
     <div class="section-body">
       <div class="step">
         <div class="step-num">1</div>
-        <div class="step-text">Mantené la <strong>misma cantidad</strong> de mozos activos que plazas activas para que la rotación funcione sin problemas.</div>
+        <div class="step-text">Mantener la <strong>misma cantidad</strong> de mozos activos que plazas activas para que la rotación funcione sin problemas.</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-text">Si un mozo no viene, <strong>desactivalo</strong> en vez de eliminarlo. Así conservás su historial.</div>
+        <div class="step-text">Si un mozo no viene, <strong>desactivar</strong> en vez de eliminar. Así se conserva su historial.</div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-text">Usá las <strong>restricciones</strong> para que el sistema no asigne a un mozo donde no corresponde.</div>
+        <div class="step-text">Usar las <strong>restricciones</strong> para evitar que el sistema asigne a un mozo donde no corresponde.</div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
-        <div class="step-text">Si necesitás forzar una posición, <strong>asigná manualmente antes de rotar</strong>. La rotación respeta esas asignaciones.</div>
+        <div class="step-text">Para forzar una posición, <strong>asignar manualmente antes de generar la plaza</strong>. La rotación respetar esas asignaciones.</div>
       </div>
       <div class="step">
         <div class="step-num">5</div>
-        <div class="step-text">Revisá el <strong>resumen por mozo</strong> periódicamente para verificar que la distribución sea justa.</div>
+        <div class="step-text">Revisar el <strong>resumen por mozo</strong> periódicamente para verificar que la distribución sea justa.</div>
       </div>
       <div class="step">
         <div class="step-num">6</div>
-        <div class="step-text">El <strong>orden de los sectores</strong> en la pestaña Salón define hacia dónde avanza la rotación. Configuralo una vez y no lo cambies seguido.</div>
+        <div class="step-text">El <strong>orden de los sectores</strong> en la pestaña Salón definir hacia dónde avanza la rotación. Configurar una vez y no modificar seguido.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-text">Usar <strong>grupos</strong> para unificar sectores grandes divididos en partes. La rotación los tratar como un solo sector.</div>
       </div>
     </div>
   </div>
