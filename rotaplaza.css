@@ -83,8 +83,8 @@ input[type=text]:focus{border-color:var(--gold)}
 .ss-cfg-name.off{color:var(--text3);text-decoration:line-through}
 .add-ss-row{display:flex;gap:6px;margin-top:8px;padding-left:12px}
 /* HISTORIAL */
-.hist-header{display:grid;grid-template-columns:44px 60px 1fr 1fr 1fr 36px;gap:6px;padding:5px 10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);margin-bottom:4px}
-.hist-row{display:grid;grid-template-columns:48px 72px 1fr 1fr 1fr;gap:6px;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);align-items:center}
+.hist-header{display:grid;grid-template-columns:80px 48px 1fr 1fr 1fr 36px;gap:6px;padding:5px 10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.hist-row{display:grid;grid-template-columns:80px 48px 1fr 1fr 1fr 36px;gap:6px;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);align-items:center}
 .hist-hora{font-family:monospace;color:var(--text2);font-size:11px}
 /* CHIPS */
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
