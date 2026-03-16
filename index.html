@@ -14,6 +14,20 @@
 <body>
 <div id="loader"><div class="spinner"></div><div style="color:var(--text3);font-size:13px">Conectando con Firebase...</div></div>
 
+<div id="login" style="display:none">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;padding:20px">
+    <img src="img/Logo.png" alt="Logo" style="height:48px;opacity:.8"/>
+    <h1 style="color:var(--gold2);font-size:20px">SistemAlf Plaza</h1>
+    <p style="color:var(--text3);font-size:13px">Iniciar sesión</p>
+    <div style="width:100%;max-width:280px;display:flex;flex-direction:column;gap:10px">
+      <input type="email" id="login-email" placeholder="Usuario" style="width:100%;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none"/>
+      <input type="password" id="login-pass" placeholder="Contraseña" style="width:100%;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none"/>
+      <button id="login-btn" onclick="window.doLogin()" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--gold);background:rgba(201,147,58,.15);color:var(--gold2);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">Entrar</button>
+      <div id="login-error" style="display:none;color:#f0a0a0;font-size:12px;text-align:center"></div>
+    </div>
+  </div>
+</div>
+
 <div id="app" style="display:none">
   <div id="header">
     <div style="display:flex;align-items:center;gap:12px">

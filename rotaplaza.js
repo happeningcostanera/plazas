@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     getFirestore, collection, doc, onSnapshot,
     setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs, getDoc
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { firebaseConfig } from "./config.js";
 
   const app = initializeApp(firebaseConfig);
@@ -88,18 +88,41 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   const auth = getAuth(app);
-  if(!turnoValido) { /* no iniciar app sin turno */ }
-  else signInAnonymously(auth).then(()=>{
+
+  function iniciarApp() {
     document.getElementById("loader").style.display="none";
+    document.getElementById("login").style.display="none";
     document.getElementById("app").style.display="block";
-    // Mostrar turno en header
     const headerTurno=document.getElementById("header-turno");
     const tc=TURNO_COLORES[turno];
     if(headerTurno) headerTurno.innerHTML=`<span style="color:${tc.accent}">${turno==="noche"?"🌙":"☀️"} Turno ${TURNO_NOMBRES[turno]}</span>`;
     if(turno==="noche") document.body.classList.add("turno-noche");
     seedIfEmpty();
-  }).catch(err=>{
-    document.getElementById("loader").innerHTML=`<div style="color:#f0a0a0;font-size:13px;text-align:center">⛔ Error de autenticación<br><small>${err.message}</small></div>`;
+  }
+
+  function mostrarLogin() {
+    document.getElementById("loader").style.display="none";
+    document.getElementById("login").style.display="block";
+  }
+
+  window.doLogin = async function() {
+    const email=document.getElementById("login-email").value.trim();
+    const pass=document.getElementById("login-pass").value;
+    const errEl=document.getElementById("login-error");
+    errEl.style.display="none";
+    if(!email||!pass){ errEl.textContent="Completar ambos campos."; errEl.style.display="block"; return; }
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      errEl.textContent="Usuario o contraseña incorrectos.";
+      errEl.style.display="block";
+    }
+  };
+
+  if(!turnoValido) { /* no iniciar app sin turno */ }
+  else onAuthStateChanged(auth, user => {
+    if(user && user.email) iniciarApp();
+    else mostrarLogin();
   });
 
   async function seedIfEmpty() {
