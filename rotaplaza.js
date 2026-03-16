@@ -76,7 +76,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         <p style="color:var(--text3);font-size:13px">Seleccioná el turno</p>
         <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
           <a href="?turno=manana" style="text-decoration:none;background:linear-gradient(135deg,rgba(201,147,58,.15),rgba(232,184,102,.08));border:1px solid #e8b866;border-radius:14px;padding:24px 40px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .2s">
-            <span style="font-size:36px">🌅</span>
+            <span style="font-size:36px">☀️</span>
             <span style="color:#e8b866;font-size:18px;font-weight:700">Mañana</span>
           </a>
           <a href="?turno=noche" style="text-decoration:none;background:linear-gradient(135deg,rgba(60,120,180,.15),rgba(144,207,224,.08));border:1px solid #90cfe0;border-radius:14px;padding:24px 40px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .2s">
@@ -95,7 +95,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Mostrar turno en header
     const headerTurno=document.getElementById("header-turno");
     const tc=TURNO_COLORES[turno];
-    if(headerTurno) headerTurno.innerHTML=`<span style="color:${tc.accent}">${turno==="noche"?"🌙":"🌅"} Turno ${TURNO_NOMBRES[turno]}</span>`;
+    if(headerTurno) headerTurno.innerHTML=`<span style="color:${tc.accent}">${turno==="noche"?"🌙":"☀️"} Turno ${TURNO_NOMBRES[turno]}</span>`;
     if(turno==="noche") document.body.classList.add("turno-noche");
     seedIfEmpty();
   }).catch(err=>{
@@ -148,7 +148,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const fecha=d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"long"});
     const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false});
     el.style.display="block";
-    const turnoIcon = turno==="noche" ? "🌙" : "🌅";
+    const turnoIcon = turno==="noche" ? "🌙" : "☀️";
     const turnoLabel = TURNO_NOMBRES[turno] || "Mañana";
     const turnoColor = TURNO_COLORES[turno] || TURNO_COLORES.manana;
     el.innerHTML=`<div style="padding:10px 12px;border-radius:8px 8px 0 0;background:linear-gradient(135deg,${turnoColor.bg},rgba(232,184,102,.08));border:1px solid ${turnoColor.accent};border-bottom:none;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px">
@@ -1381,7 +1381,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const titulo = document.getElementById("pres-titulo");
     const fecha = document.getElementById("pres-fecha");
 
-    const turnoIcon = turno==="noche" ? "🌙" : "🌅";
+    const turnoIcon = turno==="noche" ? "🌙" : "☀️";
     const turnoLabel = TURNO_NOMBRES[turno] || "Mañana";
     titulo.textContent = turnoIcon + " Rotación " + turnoLabel + " — " + new Date().toLocaleDateString("es-AR", {weekday:"long",day:"2-digit",month:"long"});
     fecha.textContent = new Date().toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",hour12:false}) + " hs";
