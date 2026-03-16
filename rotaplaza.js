@@ -10,7 +10,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   const db  = getFirestore(app);
 
   const LONG_PRESS_MS = 600;
-  const MAX_SS_PER_SECTOR = 5;
+  const MAX_SS_PER_SECTOR = 12;
   const MAX_SS_PER_BAR_SECTOR = 10;
 
   // ===================== TURNO =====================
@@ -441,13 +441,30 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSector('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
           <button class="btn btn-red" onclick="eliminarSector('${s.id}')">✕</button>
         </div>
+        <div style="padding:4px 12px 6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text3)">Grupo:</span>
+          <select onchange="setGrupo('${s.id}',this.value)" style="background:var(--bg);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:3px 8px;font-family:'DM Sans',sans-serif;font-size:11px;outline:none">
+            <option value="" ${!s.grupo?"selected":""}>— sin grupo —</option>
+            ${[...new Set(sectores.map(x=>x.grupo).filter(Boolean))].map(g=>
+              `<option value="${g}" ${s.grupo===g?"selected":""}>${g}</option>`
+            ).join("")}
+          </select>
+          <input type="text" placeholder="Nuevo grupo" id="nuevo-grupo-${s.id}" style="width:90px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:3px 8px;font-family:'DM Sans',sans-serif;font-size:11px;outline:none"/>
+          <button class="btn btn-ghost" style="font-size:10px;padding:2px 6px" onclick="crearGrupo('${s.id}')">+ Crear</button>
+        </div>
         <div class="ss-cfg-list">${subsHtml}</div>
         ${canAdd?`<div class="add-ss-row">
           <input type="text" id="new-ss-${s.id}" placeholder="Nuevo sub sector" style="font-size:12px;padding:6px 10px"/>
           <button class="btn btn-green" onclick="agregarSubsector('${s.id}')">+ Sub</button>
-        </div>`:`<div style="font-size:10px;color:var(--text3);padding-left:12px;margin-top:6px">Máximo 5 sub sectores</div>`}
+        </div>`:`<div style="font-size:10px;color:var(--text3);padding-left:12px;margin-top:6px">Máximo 12 sub sectores</div>`}
       </div>`;
     }).join("");
+  }
+
+  // Grupo efectivo de un sector (para rotación): si tiene grupo, lo usa; si no, usa su propio id
+  function grupoDeId(sectorId) {
+    const s=sectores.find(x=>x.id===sectorId);
+    return s&&s.grupo ? s.grupo : sectorId;
   }
 
   // Resolver nombre actual de un mozo desde un registro del historial (por ID o fallback nombre)
@@ -777,58 +794,66 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     // Orden de sectores activos (el orden de la pestaña Sectores define la secuencia de rotación)
     const sectoresActivos=sectores.filter(s=>isDisp(s));
-    const ordenSectorIds=sectoresActivos.map(s=>s.id);
 
-    // IDs de sectores con regla "evitar repetir"
-    const sectoresEvitarIds=new Set(sectoresActivos.filter(s=>s.evitarRepetirSector).map(s=>s.id));
+    // Grupos únicos en orden (sectores con mismo grupo cuentan como uno)
+    const ordenGrupos=[];
+    sectoresActivos.forEach(s=>{
+      const g=s.grupo||s.id;
+      if(!ordenGrupos.includes(g)) ordenGrupos.push(g);
+    });
 
-    // Para cada mozo, averiguar en qué sector estuvo en la última rotación
-    const ultimoSectorPorMozo={};
+    // IDs de sectores con regla "evitar repetir" → mapeados a grupo
+    const gruposEvitar=new Set();
+    sectoresActivos.filter(s=>s.evitarRepetirSector).forEach(s=>{
+      gruposEvitar.add(s.grupo||s.id);
+    });
+
+    // Para cada mozo, averiguar en qué grupo estuvo en la última rotación
+    const ultimoGrupoPorMozo={};
     mozosLibres.forEach(m=>{
       for(const h of historial){
         if(h.mozoId!==m.id) continue;
-        // Encontrar el sector de este registro
         const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
                              ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
-        if(sl){ ultimoSectorPorMozo[m.id]=sl.sectorId; break; }
+        if(sl){ ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId); break; }
       }
     });
 
-    // Calcular el sector ideal para cada mozo (el siguiente en el orden)
-    const sectorIdealPorMozo={};
+    // Calcular el grupo ideal para cada mozo (el siguiente en el orden)
+    const grupoIdealPorMozo={};
     mozosLibres.forEach(m=>{
-      const ultimoSector=ultimoSectorPorMozo[m.id];
-      if(!ultimoSector){
-        sectorIdealPorMozo[m.id]=null; // sin historial, cualquier sector vale
+      const ultimoGrupo=ultimoGrupoPorMozo[m.id];
+      if(!ultimoGrupo){
+        grupoIdealPorMozo[m.id]=null;
         return;
       }
-      const idxActual=ordenSectorIds.indexOf(ultimoSector);
+      const idxActual=ordenGrupos.indexOf(ultimoGrupo);
       if(idxActual===-1){
-        sectorIdealPorMozo[m.id]=null;
+        grupoIdealPorMozo[m.id]=null;
         return;
       }
-      // El siguiente sector en la secuencia (circular)
-      const idxSiguiente=(idxActual+1)%ordenSectorIds.length;
-      sectorIdealPorMozo[m.id]=ordenSectorIds[idxSiguiente];
+      const idxSiguiente=(idxActual+1)%ordenGrupos.length;
+      grupoIdealPorMozo[m.id]=ordenGrupos[idxSiguiente];
     });
 
-    // Penalización: qué tan lejos está el slot del sector ideal del mozo
-    // 0 = es el sector ideal, 1 = un sector de distancia, 2 = dos, etc.
-    function distanciaSector(mozoId, sectorId) {
-      const ideal=sectorIdealPorMozo[mozoId];
-      if(!ideal) return 0; // sin preferencia
-      const idxIdeal=ordenSectorIds.indexOf(ideal);
-      const idxSlot=ordenSectorIds.indexOf(sectorId);
+    // Penalización: qué tan lejos está el grupo del slot del grupo ideal del mozo
+    function distanciaGrupo(mozoId, sectorId) {
+      const ideal=grupoIdealPorMozo[mozoId];
+      if(!ideal) return 0;
+      const grupoSlot=grupoDeId(sectorId);
+      const idxIdeal=ordenGrupos.indexOf(ideal);
+      const idxSlot=ordenGrupos.indexOf(grupoSlot);
       if(idxIdeal===-1||idxSlot===-1) return 0;
-      const total=ordenSectorIds.length;
+      const total=ordenGrupos.length;
       return (idxSlot-idxIdeal+total)%total;
     }
 
-    // Penalización por sector "evitar repetir"
+    // Penalización por grupo "evitar repetir"
     function penEvitarRepetir(mozoId, sectorId) {
-      if(!sectoresEvitarIds.has(sectorId)) return 0;
-      const ultimo=ultimoSectorPorMozo[mozoId];
-      return (ultimo===sectorId)?1:0;
+      const grupoSlot=grupoDeId(sectorId);
+      if(!gruposEvitar.has(grupoSlot)) return 0;
+      const ultimo=ultimoGrupoPorMozo[mozoId];
+      return (ultimo===grupoSlot)?1:0;
     }
 
     // Solo rotar slots libres, con mozos libres
@@ -841,7 +866,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const mozo=mozosLibres[circularPos];
         if(mozosUsados.has(mozo.id)) continue;
         if((mozo.restricciones||[]).includes(slot.slotId)) continue;
-        const dist=distanciaSector(mozo.id, slot.sectorId);
+        const dist=distanciaGrupo(mozo.id, slot.sectorId);
         const penRepetir=penEvitarRepetir(mozo.id, slot.sectorId);
         candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),dist,penRepetir,circularPos:mi});
       }
@@ -1155,6 +1180,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   window.toggleEvitarRepetir = async function(sectorId, val) {
     await setDoc(doc(sectoresCol, sectorId), { evitarRepetirSector: val }, { merge: true });
+  };
+
+  window.setGrupo = async function(sectorId, grupo) {
+    await setDoc(doc(sectoresCol, sectorId), { grupo: grupo || null }, { merge: true });
+  };
+
+  window.crearGrupo = async function(sectorId) {
+    const input=document.getElementById("nuevo-grupo-"+sectorId);
+    const nombre=input?.value.trim();
+    if(!nombre) return;
+    await setDoc(doc(sectoresCol, sectorId), { grupo: nombre }, { merge: true });
+    input.value="";
   };
 
   window.toggleSector = async function(id,disp) {
