@@ -254,7 +254,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
           html+=`<span class="ss-nombre">${ss.nombre}</span>`;
           if(mozo){
-            html+=`<span class="ss-mozo">${mozo.emoji} ${mozo.nombre}</span>`;
+            html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
             if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -275,7 +275,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
         html+=`<span class="ss-nombre">${s.nombre}</span>`;
         if(mozo){
-          html+=`<span class="ss-mozo">${mozo.emoji} ${mozo.nombre}</span>`;
+          html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
           if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
           if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -317,7 +317,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="chipBarClick('${slotId}')">`;
             html+=`<span class="ss-nombre">${ss.nombre}</span>`;
             if(mozo){
-              html+=`<span class="ss-mozo">🍸 ${mozo.nombre}</span>`;
+              html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
               html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
               html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             } else {
