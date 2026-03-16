@@ -547,13 +547,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const nombre=resolverNombreMozo(h);
         const d = h.ts ? new Date(h.ts) : null;
         const hora  = d ? d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false}) : "--:--";
-        const fecha = d ? d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"}) : "";
+        const fecha = d ? d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric"}) : "";
         const slotLabel = h.subsector || h.sector || "";
         const key = `${nombre}||${slotLabel}`;
         const count = countMap.get(key)||0;
         return `<div class="hist-row">
-          <span class="hist-hora">${hora}</span>
           <span style="font-size:11px;color:var(--text3)">${fecha}</span>
+          <span class="hist-hora">${hora}</span>
           <span>${nombre}</span>
           <span style="color:var(--gold2)">${h.sector||""}</span>
           <span style="color:var(--text2)">${h.subsector||""}</span>
