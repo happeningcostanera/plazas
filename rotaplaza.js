@@ -21,7 +21,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   const turnoValido = TURNOS_VALIDOS.includes(turno);
 
   let popupSlotId=null, restMozoId=null, editCtx=null;
-  let mozos=[], mozosBar=[], sectores=[], sectoresBar=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
+  let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
 
   // Campo de disponibilidad por turno (fallback a "disponible" para datos existentes)
@@ -32,6 +32,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   const mozosCol    = collection(db,"mozos");
   const barraCol      = collection(db,"mozosBar");
   const sectoresBarCol = collection(db,"sectoresBar");
+  const peonesCol      = collection(db,"peones");
+  const sectoresPeonCol = collection(db,"sectoresPeon");
   const sectoresCol = collection(db,"sectores");
   // Colecciones por turno (asignaciones e historial)
   const asigCol     = collection(db, turnoValido ? "asignaciones_" + turno : "asignaciones");
@@ -50,6 +52,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   onSnapshot(mozosCol, snap => { mozos=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(barraCol,       snap => { mozosBar=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(query(sectoresBarCol,orderBy("orden","asc")), snap => { sectoresBar=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
+  onSnapshot(peonesCol,       snap => { peones=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
+  onSnapshot(query(sectoresPeonCol,orderBy("orden","asc")), snap => { sectoresPeon=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(query(sectoresCol,orderBy("orden","asc")), snap => { sectores=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(asigCol, snap => { asignaciones={}; snap.docs.forEach(d=>{asignaciones[d.id]=d.data();}); scheduleRenderAll(); });
   onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); });
@@ -184,7 +188,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     renderStats(); renderAvisoGlobal(); renderAvisoRotacion(); renderUltimaRotacion();
     const btnLib=document.getElementById("btn-liberar-todo");
     if(btnLib) btnLib.style.display=Object.keys(asignaciones).length>0?"inline-block":"none";
-    renderSectoresGrid(); renderLibres(); renderPersonal(); renderSectoresConfig(); renderBarraGrid();
+    renderSectoresGrid(); renderLibres(); renderPersonal(); renderSectoresConfig(); renderBarraGrid(); renderPeonesGrid();
   }
 
   function renderStats() {
@@ -395,6 +399,81 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     }).join("");
   }
 
+  function renderPeonesGrid() {
+    // Obtener peones asignados (keys con prefijo peon_)
+    const peonAsig = Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"));
+
+    const buildPeonesHtml = () => {
+      let html="";
+      sectoresPeon.filter(s=>isDisp(s)).forEach(s=>{
+        const asigEnSector = peonAsig.filter(([k])=>k.startsWith("peon_"+s.id+"___"));
+        html+=`<div class="sector-row"><div class="sector-label">🧹 ${s.nombre}</div><div class="sector-chips">`;
+        if(asigEnSector.length>0){
+          asigEnSector.forEach(([slotId,a])=>{
+            const p=peones.find(p=>p.id===a.mozoId);
+            if(!p) return;
+            html+=`<div class="ss-chip ocupada">`;
+            html+=`<span class="ss-mozo">${p.nombre}</span>`;
+            html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
+            html+=`</div>`;
+          });
+        }
+        // Botón para agregar peón al sector
+        html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer">`;
+        html+=`<span class="ss-libre-txt">+ asignar peón</span>`;
+        html+=`</div>`;
+        html+=`</div></div>`;
+      });
+      return html;
+    };
+
+    const hasPeonSectors = sectoresPeon.filter(s=>isDisp(s)).length>0;
+
+    // Grilla en pestaña Peones
+    const opGrid=document.getElementById("peones-op-grid");
+    if(opGrid){
+      opGrid.innerHTML = hasPeonSectors
+        ? buildPeonesHtml()
+        : `<div class="empty" style="font-size:12px">Agregá sectores de peones abajo para empezar.</div>`;
+    }
+
+    // Grilla en pestaña Operación
+    const opSec=document.getElementById("peones-op-section");
+    const opGridOp=document.getElementById("peones-op-grid-op");
+    if(opSec&&opGridOp){
+      opSec.style.display = hasPeonSectors ? "block" : "none";
+      if(hasPeonSectors) opGridOp.innerHTML = buildPeonesHtml();
+    }
+
+    // Peones sin asignar
+    const peonAsigIds=new Set(peonAsig.map(([,v])=>v.mozoId));
+    const peonLibres=peones.filter(p=>isDisp(p)&&!peonAsigIds.has(p.id));
+    const peonLibresSec=document.getElementById("peones-libres-section");
+    const peonLibresList=document.getElementById("peones-libres-list");
+    if(peonLibresSec&&peonLibresList){
+      peonLibresSec.style.display = (hasPeonSectors && peonLibres.length) ? "block" : "none";
+      peonLibresList.innerHTML = peonLibres.map(p=>`<span class="chip on">🧹 ${p.nombre}</span>`).join("");
+    }
+
+    // Config sectores de peones
+    const cfgCont=document.getElementById("sectores-peon-config");
+    if(!cfgCont) return;
+    if(sectoresPeon.length===0){
+      cfgCont.innerHTML=`<div class="empty">No hay sectores de peones aún.</div>`;
+      return;
+    }
+    cfgCont.innerHTML=sectoresPeon.map(s=>{
+      return `<div class="sector-cfg-block">
+        <div class="sector-cfg-header" style="flex-wrap:wrap">
+          <span class="sector-cfg-name ${isDisp(s)?"":"off"}">${s.nombre}</span>
+          <button class="btn btn-ghost" onclick="editarNombreSectorPeon('${s.id}')">✏️</button>
+          <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSectorPeon('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
+          <button class="btn btn-red" onclick="eliminarSectorPeon('${s.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
   function renderPersonal() {
     document.getElementById("mozos-list").innerHTML=mozos.map(m=>{
       const restTags=(m.restricciones||[]).map(slotId=>{
@@ -430,6 +509,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <button class="btn btn-ghost" onclick="abrirEdicionBar('${m.id}')">✏️</button>
           <button class="btn ${isDisp(m)?"btn-gold":"btn-green"}" onclick="toggleMozoBar('${m.id}',${!isDisp(m)})">${isDisp(m)?"Desactivar":"Activar"}</button>
           <button class="btn btn-red" onclick="eliminarMozoBar('${m.id}')">✕</button>
+        </div>
+      </div>`).join("");
+
+    // Peones
+    const peonList=document.getElementById("peones-list");
+    if(peonList) peonList.innerHTML=peones.length===0
+      ? `<div class="empty">No hay peones aún.</div>`
+      : peones.map(p=>`<div class="person-row">
+        <span style="font-size:18px">🧹</span>
+        <div class="person-info">
+          <div class="person-name ${isDisp(p)?"":"off"}">${p.nombre}</div>
+        </div>
+        <div class="person-actions">
+          <button class="btn btn-ghost" onclick="abrirEdicionPeon('${p.id}')">✏️</button>
+          <button class="btn ${isDisp(p)?"btn-gold":"btn-green"}" onclick="togglePeon('${p.id}',${!isDisp(p)})">${isDisp(p)?"Desactivar":"Activar"}</button>
+          <button class="btn btn-red" onclick="eliminarPeon('${p.id}')">✕</button>
         </div>
       </div>`).join("");
   }
@@ -1049,7 +1144,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.liberarTodo = async function() {
     const ocupadas=Object.keys(asignaciones);
     if(ocupadas.length===0) return;
-    if(!confirm(`¿Liberar los ${ocupadas.length} slot${ocupadas.length>1?"s":""} asignados (mozos y barra)?`)) return;
+    if(!confirm(`¿Liberar los ${ocupadas.length} slot${ocupadas.length>1?"s":""} asignados (mozos, barra y peones)?`)) return;
     const batch=writeBatch(db);
     ocupadas.forEach(id=>batch.delete(doc(asigCol,id)));
     await batch.commit();
@@ -1326,6 +1421,104 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       setDoc(doc(barraCol,id),{nombre:nuevo.trim()},{merge:true});
   };
 
+  // ── PEONES CRUD ──
+  window.agregarPeon = async function() {
+    const inp=document.getElementById("nuevo-peon");
+    const nombre=inp.value.trim();
+    if(!nombre) return;
+    await addDoc(peonesCol,{nombre,[dispKey]:true});
+    inp.value="";
+  };
+
+  window.togglePeon = async function(id,disp) {
+    await setDoc(doc(peonesCol,id),{[dispKey]:disp},{merge:true});
+    if(!disp){
+      // Liberar asignaciones de este peón
+      const batch=writeBatch(db);
+      Object.entries(asignaciones).filter(([k,v])=>k.startsWith("peon_")&&v.mozoId===id).forEach(([k])=>batch.delete(doc(asigCol,k)));
+      await batch.commit();
+    }
+  };
+
+  window.eliminarPeon = async function(id) {
+    if(!confirm("¿Eliminar este peón?")) return;
+    const batch=writeBatch(db);
+    Object.entries(asignaciones).filter(([k,v])=>k.startsWith("peon_")&&v.mozoId===id).forEach(([k])=>batch.delete(doc(asigCol,k)));
+    batch.delete(doc(peonesCol,id));
+    await batch.commit();
+  };
+
+  window.abrirEdicionPeon = function(id) {
+    const p=peones.find(p=>p.id===id);
+    if(!p) return;
+    const nuevo=prompt("Nombre del peón:",p.nombre);
+    if(nuevo&&nuevo.trim()&&nuevo.trim()!==p.nombre)
+      setDoc(doc(peonesCol,id),{nombre:nuevo.trim()},{merge:true});
+  };
+
+  // ── SECTORES DE PEONES ──
+  window.agregarSectorPeon = async function() {
+    const inp=document.getElementById("nuevo-sector-peon");
+    const nombre=inp.value.trim(); if(!nombre) return;
+    const snap=await getDocs(sectoresPeonCol);
+    const maxOrden=snap.docs.reduce((m,d)=>Math.max(m,d.data().orden||0),0);
+    await addDoc(sectoresPeonCol,{nombre,[dispKey]:true,orden:maxOrden+1});
+    inp.value="";
+  };
+
+  window.toggleSectorPeon = async function(id,disp) {
+    await setDoc(doc(sectoresPeonCol,id),{[dispKey]:disp},{merge:true});
+    if(!disp){
+      const batch=writeBatch(db);
+      Object.keys(asignaciones).filter(k=>k.startsWith("peon_"+id+"___")).forEach(k=>batch.delete(doc(asigCol,k)));
+      await batch.commit();
+    }
+  };
+
+  window.eliminarSectorPeon = async function(id) {
+    if(!confirm("¿Eliminar este sector de peones?")) return;
+    const batch=writeBatch(db);
+    batch.delete(doc(sectoresPeonCol,id));
+    Object.keys(asignaciones).filter(k=>k.startsWith("peon_"+id+"___")).forEach(k=>batch.delete(doc(asigCol,k)));
+    await batch.commit();
+  };
+
+  window.editarNombreSectorPeon = async function(id) {
+    const s=sectoresPeon.find(s=>s.id===id); if(!s) return;
+    const nuevo=prompt("Nombre del sector:",s.nombre);
+    if(nuevo&&nuevo.trim()) await setDoc(doc(sectoresPeonCol,id),{nombre:nuevo.trim()},{merge:true});
+  };
+
+  // Popup de asignación para sectores de peones
+  window.chipPeonClick = function(sectorId) {
+    const peonDisp=peones.filter(p=>isDisp(p));
+    if(peonDisp.length===0){alert("No hay peones activos. Agregalos en la pestaña 🧹 Peones.");return;}
+    const s=sectoresPeon.find(s=>s.id===sectorId);
+    const label=s?s.nombre:sectorId;
+    document.getElementById("popup-title").textContent="Asignar peón";
+    document.getElementById("popup-sub").textContent="📍 "+label;
+    // Peones ya asignados a este sector
+    const asigEnSector=Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"+sectorId+"___")).map(([,v])=>v.mozoId);
+    const asigSet=new Set(asigEnSector);
+    // Peones ya asignados en cualquier sector
+    const peonAsigGlobal=new Set(Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_")).map(([,v])=>v.mozoId));
+    document.getElementById("popup-opciones").innerHTML=peonDisp.map(p=>{
+      const enEsteSector=asigSet.has(p.id);
+      const enOtro=!enEsteSector&&peonAsigGlobal.has(p.id);
+      const disabled=enEsteSector;
+      return `<div class="popup-opcion ${disabled?"restringido":""}" onclick="${disabled?"":"window.asignarPeonSlot('"+sectorId+"','"+p.id+"')"}">
+        🧹 ${p.nombre}${enEsteSector?" <small style='color:var(--text3)'>(ya en este sector)</small>":""}${enOtro?" <small style='color:var(--text3)'>(en otro sector)</small>":""}
+      </div>`;
+    }).join("");
+    document.getElementById("popup-overlay").classList.add("show");
+  };
+
+  window.asignarPeonSlot = async function(sectorId, peonId) {
+    document.getElementById("popup-overlay").classList.remove("show");
+    const slotId="peon_"+sectorId+"___"+peonId;
+    await setDoc(doc(asigCol,slotId),{mozoId:peonId,desde:Date.now()});
+  };
+
   // Popup de asignación para sectores de barra
   window.chipBarClick = function(slotId) {
     if(asignaciones[slotId]) return;
@@ -1454,14 +1647,31 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       });
     }
 
+    // Sectores de peones
+    const hasPeonAsig = sectoresPeon.filter(s=>isDisp(s)).length>0;
+    if(hasPeonAsig){
+      html += `<div class="pres-sector-label" style="color:#7ab648;border-color:#7ab648">🧹 Peones</div>`;
+      sectoresPeon.filter(s=>isDisp(s)).forEach(s=>{
+        const peonEnSector = Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"+s.id+"___"));
+        if(peonEnSector.length===0) return;
+        html += `<div class="pres-sector-label pres-sector-label-sub">${s.nombre}</div>`;
+        html += `<div class="pres-sector-row">`;
+        peonEnSector.forEach(([,a])=>{
+          const p = peones.find(p=>p.id===a.mozoId);
+          html += presCard(p?p.nombre:"", p?{nombre:p.nombre,emoji:"🧹"}:null, false, "#7ab648");
+        });
+        html += `</div>`;
+      });
+    }
+
     grid.innerHTML = html;
     overlay.style.display = "block";
     if(overlay.requestFullscreen) overlay.requestFullscreen().catch(()=>{});
   };
 
-  function presCard(nombre, mozo, esBarra=false) {
-    const borderColor = esBarra ? "#5a8fa0" : "var(--gold)";
-    const mozoColor = esBarra ? "#90cfe0" : "#a8d878";
+  function presCard(nombre, mozo, esBarra=false, customColor=null) {
+    const borderColor = customColor || (esBarra ? "#5a8fa0" : "var(--gold)");
+    const mozoColor = customColor || (esBarra ? "#90cfe0" : "#a8d878");
     return `<div class="pres-card" style="border-color:${borderColor}">
       <div class="pres-card-nombre">${nombre}</div>
       ${mozo
@@ -1569,4 +1779,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   document.getElementById("nuevo-mozo").addEventListener("keydown",  e=>e.key==="Enter"&&window.agregarMozo());
   document.getElementById("nuevo-sector").addEventListener("keydown",e=>e.key==="Enter"&&window.agregarSector());
+  document.getElementById("nuevo-peon").addEventListener("keydown",  e=>e.key==="Enter"&&window.agregarPeon());
+  document.getElementById("nuevo-sector-peon").addEventListener("keydown",e=>e.key==="Enter"&&window.agregarSectorPeon());
   document.getElementById("edit-nombre").addEventListener("keydown", e=>e.key==="Enter"&&window.guardarEdicion());

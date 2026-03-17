@@ -47,7 +47,8 @@
     <button class="tab-btn active" onclick="switchTab('operacion',this)">⚡ Nueva Plaza</button>
     <button class="tab-btn"        onclick="switchTab('personal',this)">👥 Personal</button>
     <button class="tab-btn"        onclick="switchTab('sectores',this)">🗺️ Salón</button>
-    <button class="tab-btn"        onclick="switchTab('barra',this)">🍸 Barra</button>    
+    <button class="tab-btn"        onclick="switchTab('barra',this)">🍸 Barra</button>
+    <button class="tab-btn"        onclick="switchTab('peones',this)">🧹 Peones</button>
     <button class="tab-btn"        onclick="switchTab('rotaciones',this)">🔄 Plazas</button>
     <button class="tab-btn"        onclick="switchTab('historial',this)">📋 Historial</button>
   </div>
@@ -95,6 +96,14 @@
         <div class="section-title">🍸 Sin asignar en barra</div>
         <div class="chips" id="barra-libres-list"></div>
       </div>
+      <div class="section" id="peones-op-section" style="display:none">
+        <div class="section-title">🧹 Peones</div>
+        <div id="peones-op-grid-op"></div>
+      </div>
+      <div class="section" id="peones-libres-section" style="display:none">
+        <div class="section-title">🧹 Peones sin asignar</div>
+        <div class="chips" id="peones-libres-list"></div>
+      </div>
     </div>
 
     <!-- BARRA -->
@@ -112,6 +121,24 @@
           <button class="btn btn-gold" onclick="agregarSectorBar()">+ Agregar</button>
         </div>
         <div id="sectores-bar-config"></div>
+      </div>
+    </div>
+
+    <!-- PEONES -->
+    <div id="tab-peones" class="tab-content">
+      <!-- Operación peones -->
+      <div class="section">
+        <div class="section-title">🧹 Asignación</div>
+        <div id="peones-op-grid"></div>
+      </div>
+      <!-- Config sectores de peones -->
+      <div class="section">
+        <div class="section-title">Sectores de peones</div>
+        <div class="input-row">
+          <input type="text" id="nuevo-sector-peon" placeholder="Nombre del sector"/>
+          <button class="btn btn-gold" onclick="agregarSectorPeon()">+ Agregar</button>
+        </div>
+        <div id="sectores-peon-config"></div>
       </div>
     </div>
 
@@ -135,6 +162,14 @@
           <button class="btn btn-gold" onclick="agregarMozoBar()">+ Agregar</button>
         </div>
         <div id="mozos-bar-list"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🧹 Peones</div>
+        <div class="input-row" style="margin-bottom:10px">
+          <input type="text" id="nuevo-peon" placeholder="Nombre del peón"/>
+          <button class="btn btn-gold" onclick="agregarPeon()">+ Agregar</button>
+        </div>
+        <div id="peones-list"></div>
       </div>
     </div>
 
