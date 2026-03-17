@@ -104,6 +104,29 @@
         <div class="section-title">🧹 Peones sin asignar</div>
         <div class="chips" id="peones-libres-list"></div>
       </div>
+      <div class="section" id="notas-section">
+        <div class="section-title">📝 Notas del turno</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:2;min-width:200px;display:flex;flex-direction:column;gap:10px">
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">🐟 Pesca</label>
+              <textarea id="nota-pesca" rows="2" oninput="guardarNotas()" placeholder="Pescados del día..." style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:vertical"></textarea>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">💲 Dólar</label>
+              <input type="text" id="nota-dolar" oninput="formatDolar(this);guardarNotas()" placeholder="$0,00" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none"/>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">💡 Sugerencia</label>
+              <textarea id="nota-sugerencia" rows="2" oninput="guardarNotas()" placeholder="Sugerencia del día..." style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:vertical"></textarea>
+            </div>
+          </div>
+          <div style="flex:1;min-width:140px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">⚠️ Faltantes</label>
+            <textarea id="nota-faltantes" rows="8" oninput="guardarNotas()" placeholder="Productos faltantes..." style="width:100%;height:calc(100% - 20px);background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- BARRA -->

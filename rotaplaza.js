@@ -23,6 +23,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   let popupSlotId=null, restMozoId=null, editCtx=null;
   let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
+  let notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
 
   // Campo de disponibilidad por turno (fallback a "disponible" para datos existentes)
   const dispKey = turnoValido ? "disponible_" + turno : "disponible";
@@ -58,8 +59,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   onSnapshot(asigCol, snap => { asignaciones={}; snap.docs.forEach(d=>{asignaciones[d.id]=d.data();}); scheduleRenderAll(); });
   onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); });
   const metaSuffix = turnoValido ? "_" + turno : "";
-  onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => { ultimaRotacionTs=snap.exists()?snap.data().ts:null; renderUltimaRotacion(); });
+  let ultimaRotacionNotas={};
+  onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => { if(snap.exists()){ultimaRotacionTs=snap.data().ts;ultimaRotacionNotas=snap.data().notas||{};}else{ultimaRotacionTs=null;ultimaRotacionNotas={};} renderUltimaRotacion(); });
   onSnapshot(doc(db,"meta","rotacion"+metaSuffix), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
+  onSnapshot(doc(db,"meta","notas"+metaSuffix), snap => {
+    if(snap.exists()){
+      notas=snap.data();
+      const p=document.getElementById("nota-pesca");
+      const d=document.getElementById("nota-dolar");
+      const s=document.getElementById("nota-sugerencia");
+      const f=document.getElementById("nota-faltantes");
+      if(p&&p!==document.activeElement) p.value=notas.pesca||"";
+      if(d&&d!==document.activeElement) d.value=notas.dolar||"";
+      if(s&&s!==document.activeElement) s.value=notas.sugerencia||"";
+      if(f&&f!==document.activeElement) f.value=notas.faltantes||"";
+    }
+  });
 
   window.addEventListener("online",  ()=>setConn(true));
   window.addEventListener("offline", ()=>setConn(false));
@@ -189,6 +204,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const btnLib=document.getElementById("btn-liberar-todo");
     if(btnLib) btnLib.style.display=Object.keys(asignaciones).length>0?"inline-block":"none";
     renderSectoresGrid(); renderLibres(); renderPersonal(); renderSectoresConfig(); renderBarraGrid(); renderPeonesGrid();
+    ["nota-pesca","nota-dolar","nota-sugerencia","nota-faltantes"].forEach(id=>{const el=document.getElementById(id);if(el) el.disabled=formacionBloqueada;});
   }
 
   function renderStats() {
@@ -863,6 +879,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       html+=`</div>`;
     }
 
+    // Notas (solo última rotación)
+    if(rotPaginaActual===0){
+      const n=ultimaRotacionNotas;
+      const tieneNotas=n.pesca||n.dolar||n.sugerencia||n.faltantes;
+      if(tieneNotas){
+        html+=`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">`;
+        html+=`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📝 Notas</div>`;
+        html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px">`;
+        html+=`<div style="flex:2;min-width:180px">`;
+        if(n.pesca) html+=`<div style="margin-bottom:6px"><span style="color:var(--text3)">🐟 Pesca:</span> <span style="color:var(--text)">${n.pesca}</span></div>`;
+        if(n.dolar) html+=`<div style="margin-bottom:6px"><span style="color:var(--text3)">💲 Dólar:</span> <span style="color:var(--gold2);font-weight:700">${n.dolar}</span></div>`;
+        if(n.sugerencia) html+=`<div style="margin-bottom:6px"><span style="color:var(--text3)">💡 Sugerencia:</span> <span style="color:var(--text)">${n.sugerencia}</span></div>`;
+        html+=`</div>`;
+        if(n.faltantes) html+=`<div style="flex:1;min-width:120px"><span style="color:var(--text3)">⚠️ Faltantes:</span><div style="color:#f0a060;margin-top:4px;white-space:pre-wrap">${n.faltantes}</div></div>`;
+        html+=`</div></div>`;
+      }
+    }
+
     html+=`</div>`;
     listEl.innerHTML=html;
   }
@@ -1116,7 +1150,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       newRefs.push(ref.id);
     });
 
-    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora},{merge:true});
+    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora,notas:{...notas}},{merge:true});
     await batch.commit();
 
     ultimaRotacionHistIds=newRefs;
@@ -1201,7 +1235,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(!confirm(`¿Liberar los ${ocupadas.length} slot${ocupadas.length>1?"s":""} asignados (mozos, barra y peones)?`)) return;
     const batch=writeBatch(db);
     ocupadas.forEach(id=>batch.delete(doc(asigCol,id)));
+    batch.set(doc(db,"meta","notas"+metaSuffix),{pesca:"",dolar:"",sugerencia:"",faltantes:""});
     await batch.commit();
+    notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
+    const np=document.getElementById("nota-pesca"); if(np) np.value="";
+    const nd=document.getElementById("nota-dolar"); if(nd) nd.value="";
+    const ns=document.getElementById("nota-sugerencia"); if(ns) ns.value="";
+    const nf=document.getElementById("nota-faltantes"); if(nf) nf.value="";
     pendingHistorial=[];
     ultimaRotacionHistIds=[];
     formacionBloqueada=false;
@@ -1720,6 +1760,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       });
     }
 
+    // Notas del turno
+    const tieneNotas = notas.pesca||notas.dolar||notas.sugerencia||notas.faltantes;
+    if(tieneNotas){
+      html += `<div class="pres-sector-label" style="color:var(--text2);border-color:var(--border2)">📝 Notas</div>`;
+      html += `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">`;
+      html += `<div style="flex:2;min-width:200px;display:flex;flex-direction:column;gap:10px">`;
+      if(notas.pesca) html+=`<div><span style="font-size:11px;color:var(--text3);text-transform:uppercase">🐟 Pesca</span><div style="font-size:15px;color:var(--text);margin-top:4px;white-space:pre-wrap">${notas.pesca}</div></div>`;
+      if(notas.dolar) html+=`<div><span style="font-size:11px;color:var(--text3);text-transform:uppercase">💲 Dólar</span><div style="font-size:18px;font-weight:700;color:var(--gold2);margin-top:4px">${notas.dolar}</div></div>`;
+      if(notas.sugerencia) html+=`<div><span style="font-size:11px;color:var(--text3);text-transform:uppercase">💡 Sugerencia</span><div style="font-size:15px;color:var(--text);margin-top:4px;white-space:pre-wrap">${notas.sugerencia}</div></div>`;
+      html += `</div>`;
+      if(notas.faltantes) html+=`<div style="flex:1;min-width:140px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase">⚠️ Faltantes</span><div style="font-size:14px;color:#f0a060;margin-top:4px;white-space:pre-wrap">${notas.faltantes}</div></div>`;
+      html += `</div>`;
+    }
+
     grid.innerHTML = html;
     overlay.style.display = "block";
     if(overlay.requestFullscreen) overlay.requestFullscreen().catch(()=>{});
@@ -1820,6 +1874,29 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       e.returnValue="";
     }
   });
+
+  // ===================== NOTAS DEL TURNO =====================
+  let notasTimer=null;
+  window.guardarNotas = function() {
+    clearTimeout(notasTimer);
+    notasTimer=setTimeout(()=>{
+      const data={
+        pesca: document.getElementById("nota-pesca")?.value||"",
+        dolar: document.getElementById("nota-dolar")?.value||"",
+        sugerencia: document.getElementById("nota-sugerencia")?.value||"",
+        faltantes: document.getElementById("nota-faltantes")?.value||""
+      };
+      notas=data;
+      setDoc(doc(db,"meta","notas"+metaSuffix),data);
+    },500);
+  };
+
+  window.formatDolar = function(el) {
+    let v=el.value.replace(/[^0-9.,]/g,"");
+    if(!v.startsWith("$")) v="$"+v;
+    else v="$"+v.substring(1).replace(/[^0-9.,]/g,"");
+    el.value=v;
+  };
 
   // ===================== TABS =====================
   window.switchTab = function(id,el) {
