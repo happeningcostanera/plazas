@@ -318,10 +318,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             const slotId="bar_"+s.id+"___"+ss.id;
             const asig=asignaciones[slotId];
             const mozo=asig?mozosBar.find(m=>m.id===asig.mozoId):null;
-            html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="${formacionBloqueada?"":"chipBarClick('"+slotId+"')"}">`;
+            html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="${formacionBloqueada?"":"chipBarClick('"+slotId+"')"}" style="${mozo?"border-color:#5a8fa0;background:linear-gradient(135deg,#14293a,#1a3040)":"border-color:#5a8fa0"}">`;
             html+=`<span class="ss-nombre">${ss.nombre}</span>`;
             if(mozo){
-              html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
+              html+=`<span class="ss-mozo" style="color:#90cfe0">${mozo.nombre}</span>`;
               html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
               if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             } else {
