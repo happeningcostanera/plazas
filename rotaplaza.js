@@ -886,13 +886,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       if(tieneNotas){
         html+=`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">`;
         html+=`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📝 Notas</div>`;
-        html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px">`;
-        html+=`<div style="flex:2;min-width:180px">`;
-        if(n.pesca) html+=`<div style="margin-bottom:6px"><span style="color:var(--text3)">🐟 Pesca:</span> <span style="color:var(--text)">${n.pesca}</span></div>`;
-        if(n.dolar) html+=`<div style="margin-bottom:6px"><span style="color:var(--text3)">💲 Dólar:</span> <span style="color:var(--gold2);font-weight:700">${n.dolar}</span></div>`;
-        if(n.sugerencia) html+=`<div style="margin-bottom:6px"><span style="color:var(--text3)">💡 Sugerencia:</span> <span style="color:var(--text)">${n.sugerencia}</span></div>`;
+        html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">`;
+        html+=`<div style="flex:2;min-width:180px;display:flex;flex-direction:column;gap:6px">`;
+        if(n.pesca) html+=`<div style="border:1px solid var(--border2);border-radius:7px;padding:8px 10px"><span style="color:var(--text3)">🐟 Pesca:</span> <span style="color:var(--text)">${n.pesca}</span></div>`;
+        if(n.dolar) html+=`<div style="border:1px solid var(--border2);border-radius:7px;padding:8px 10px"><span style="color:var(--text3)">💲 Dólar:</span> <span style="color:var(--gold2);font-weight:700">${n.dolar}</span></div>`;
+        if(n.sugerencia) html+=`<div style="border:1px solid var(--border2);border-radius:7px;padding:8px 10px"><span style="color:var(--text3)">💡 Sugerencia:</span> <span style="color:var(--text)">${n.sugerencia}</span></div>`;
         html+=`</div>`;
-        if(n.faltantes) html+=`<div style="flex:1;min-width:120px"><span style="color:var(--text3)">⚠️ Faltantes:</span><div style="color:#f0a060;margin-top:4px;white-space:pre-wrap">${n.faltantes}</div></div>`;
+        if(n.faltantes) html+=`<div style="flex:1;min-width:120px;border:1px solid var(--border2);border-radius:7px;padding:8px 10px"><span style="color:var(--text3)">⚠️ Faltantes:</span><div style="color:#f0a060;margin-top:4px;white-space:pre-wrap">${n.faltantes}</div></div>`;
         html+=`</div></div>`;
       }
     }
@@ -1766,11 +1766,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       html += `<div class="pres-sector-label" style="color:var(--text2);border-color:var(--border2)">📝 Notas</div>`;
       html += `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">`;
       html += `<div style="flex:2;min-width:200px;display:flex;flex-direction:column;gap:10px">`;
-      if(notas.pesca) html+=`<div><span style="font-size:11px;color:var(--text3);text-transform:uppercase">🐟 Pesca</span><div style="font-size:15px;color:var(--text);margin-top:4px;white-space:pre-wrap">${notas.pesca}</div></div>`;
-      if(notas.dolar) html+=`<div><span style="font-size:11px;color:var(--text3);text-transform:uppercase">💲 Dólar</span><div style="font-size:18px;font-weight:700;color:var(--gold2);margin-top:4px">${notas.dolar}</div></div>`;
-      if(notas.sugerencia) html+=`<div><span style="font-size:11px;color:var(--text3);text-transform:uppercase">💡 Sugerencia</span><div style="font-size:15px;color:var(--text);margin-top:4px;white-space:pre-wrap">${notas.sugerencia}</div></div>`;
+      if(notas.pesca) html+=`<div style="border:1px solid var(--border2);border-radius:8px;padding:10px 12px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase">🐟 Pesca</span><div style="font-size:15px;color:var(--text);margin-top:4px;white-space:pre-wrap">${notas.pesca}</div></div>`;
+      if(notas.dolar) html+=`<div style="border:1px solid var(--border2);border-radius:8px;padding:10px 12px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase">💲 Dólar</span><div style="font-size:18px;font-weight:700;color:var(--gold2);margin-top:4px">${notas.dolar}</div></div>`;
+      if(notas.sugerencia) html+=`<div style="border:1px solid var(--border2);border-radius:8px;padding:10px 12px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase">💡 Sugerencia</span><div style="font-size:15px;color:var(--text);margin-top:4px;white-space:pre-wrap">${notas.sugerencia}</div></div>`;
       html += `</div>`;
-      if(notas.faltantes) html+=`<div style="flex:1;min-width:140px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase">⚠️ Faltantes</span><div style="font-size:14px;color:#f0a060;margin-top:4px;white-space:pre-wrap">${notas.faltantes}</div></div>`;
+      if(notas.faltantes) html+=`<div style="flex:1;min-width:140px;border:1px solid var(--border2);border-radius:8px;padding:10px 12px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase">⚠️ Faltantes</span><div style="font-size:14px;color:#f0a060;margin-top:4px;white-space:pre-wrap">${notas.faltantes}</div></div>`;
       html += `</div>`;
     }
 
