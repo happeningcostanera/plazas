@@ -811,21 +811,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     html+=`</div>`;
 
-    // Barra: asignaciones actuales
+    // Barra: asignaciones actuales (en orden de sectoresBar)
     const barAsig=Object.entries(asignaciones).filter(([k])=>k.startsWith("bar_"));
     if(barAsig.length>0){
       html+=`<div class="rotacion-grid" style="margin-top:10px">`;
       html+=`<div class="rotacion-sector-label" style="color:#5a8fa0">🍸 Barra</div>`;
-      const porSectorBar={};
-      barAsig.forEach(([k,v])=>{
-        const sl=getSlotsBar().find(s=>s.slotId===k);
-        const secNombre=sl?sl.sectorNombre:"Barra";
-        if(!porSectorBar[secNombre]) porSectorBar[secNombre]=[];
-        const mozo=mozosBar.find(m=>m.id===v.mozoId);
-        porSectorBar[secNombre].push({ssNombre:sl?sl.ssNombre:k,mozoNombre:mozo?mozo.nombre:"—"});
-      });
-      for(const [sector, items] of Object.entries(porSectorBar)){
-        html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${sector}</div>`;
+      sectoresBar.filter(s=>isDisp(s)).forEach(s=>{
+        const subs=(s.subsectores||[]).filter(ss=>isDisp(ss));
+        const items=[];
+        subs.forEach(ss=>{
+          const slotId="bar_"+s.id+"___"+ss.id;
+          const asig=asignaciones[slotId];
+          if(!asig) return;
+          const mozo=mozosBar.find(m=>m.id===asig.mozoId);
+          items.push({ssNombre:ss.nombre,mozoNombre:mozo?mozo.nombre:"—"});
+        });
+        if(items.length===0) return;
+        html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${s.nombre}</div>`;
         html+=`<div class="rotacion-sector-row">`;
         items.forEach(item=>{
           html+=`<div class="rotacion-chip" style="border-color:#5a8fa0;background:linear-gradient(135deg,#14293a,#1a3040)">`;
@@ -834,34 +836,28 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           html+=`</div>`;
         });
         html+=`</div>`;
-      }
+      });
       html+=`</div>`;
     }
 
-    // Peones: asignaciones actuales
+    // Peones: asignaciones actuales (en orden de sectoresPeon)
     const peonAsig=Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"));
     if(peonAsig.length>0){
       html+=`<div class="rotacion-grid" style="margin-top:10px">`;
       html+=`<div class="rotacion-sector-label" style="color:#7ab648">🧹 Peones</div>`;
-      const porSectorPeon={};
-      peonAsig.forEach(([k,v])=>{
-        const parts=k.replace("peon_","").split("___");
-        const secObj=sectoresPeon.find(s=>s.id===parts[0]);
-        const secNombre=secObj?secObj.nombre:"Sector";
-        if(!porSectorPeon[secNombre]) porSectorPeon[secNombre]=[];
-        const p=peones.find(p=>p.id===v.mozoId);
-        porSectorPeon[secNombre].push(p?p.nombre:"—");
-      });
-      for(const [sector, nombres] of Object.entries(porSectorPeon)){
-        html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${sector}</div>`;
+      sectoresPeon.filter(s=>isDisp(s)).forEach(s=>{
+        const asigEnSector=peonAsig.filter(([k])=>k.startsWith("peon_"+s.id+"___"));
+        if(asigEnSector.length===0) return;
+        html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${s.nombre}</div>`;
         html+=`<div class="rotacion-sector-row">`;
-        nombres.forEach(nombre=>{
+        asigEnSector.forEach(([,v])=>{
+          const p=peones.find(p=>p.id===v.mozoId);
           html+=`<div class="rotacion-chip" style="border-color:#7ab648;background:linear-gradient(135deg,#1a3014,#203a1a)">`;
-          html+=`<span class="rotacion-chip-mozo" style="color:#a8d878">${nombre}</span>`;
+          html+=`<span class="rotacion-chip-mozo" style="color:#a8d878">${p?p.nombre:"—"}</span>`;
           html+=`</div>`;
         });
         html+=`</div>`;
-      }
+      });
       html+=`</div>`;
     }
 
