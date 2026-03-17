@@ -318,14 +318,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             const slotId="bar_"+s.id+"___"+ss.id;
             const asig=asignaciones[slotId];
             const mozo=asig?mozosBar.find(m=>m.id===asig.mozoId):null;
-            html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="chipBarClick('${slotId}')">`;
+            html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="${formacionBloqueada?"":"chipBarClick('"+slotId+"')"}">`;
             html+=`<span class="ss-nombre">${ss.nombre}</span>`;
             if(mozo){
               html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
               html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
-              html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
+              if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             } else {
-              html+=`<span class="ss-libre-txt">Libre — tap para asignar</span>`;
+              if(!formacionBloqueada) html+=`<span class="ss-libre-txt">Libre — tap para asignar</span>`;
             }
             html+=`</div>`;
           });
@@ -414,14 +414,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             if(!p) return;
             html+=`<div class="ss-chip ocupada">`;
             html+=`<span class="ss-mozo">${p.nombre}</span>`;
-            html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
+            if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             html+=`</div>`;
           });
         }
-        // Botón para agregar peón al sector
-        html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer">`;
-        html+=`<span class="ss-libre-txt">+ asignar peón</span>`;
-        html+=`</div>`;
+        // Botón para agregar peón al sector (solo si no está bloqueado)
+        if(!formacionBloqueada){
+          html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer">`;
+          html+=`<span class="ss-libre-txt">+ asignar peón</span>`;
+          html+=`</div>`;
+        }
         html+=`</div></div>`;
       });
       return html;
@@ -1543,6 +1545,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   // Popup de asignación para sectores de peones
   window.chipPeonClick = function(sectorId) {
+    if(formacionBloqueada) return;
     const peonDisp=peones.filter(p=>isDisp(p));
     if(peonDisp.length===0){alert("No hay peones activos. Agregalos en la pestaña 🧹 Peones.");return;}
     const s=sectoresPeon.find(s=>s.id===sectorId);
@@ -1573,6 +1576,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   // Popup de asignación para sectores de barra
   window.chipBarClick = function(slotId) {
+    if(formacionBloqueada) return;
     if(asignaciones[slotId]) return;
     const barDisp=mozosBar.filter(m=>isDisp(m));
     if(barDisp.length===0){alert("No hay mozos de barra activos. Agregalos en la pestaña 🍸 Barra.");return;}
