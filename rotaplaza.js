@@ -412,16 +412,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           asigEnSector.forEach(([slotId,a])=>{
             const p=peones.find(p=>p.id===a.mozoId);
             if(!p) return;
-            html+=`<div class="ss-chip ocupada">`;
-            html+=`<span class="ss-mozo">${p.nombre}</span>`;
+            html+=`<div class="ss-chip ocupada" style="border-color:#8050a0;background:linear-gradient(135deg,#2a1a3a,#302040)">`;
+            html+=`<span class="ss-mozo" style="color:#d0a0f0">${p.nombre}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             html+=`</div>`;
           });
         }
         // Botón para agregar peón al sector (solo si no está bloqueado)
         if(!formacionBloqueada){
-          html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer">`;
-          html+=`<span class="ss-libre-txt">+ asignar peón</span>`;
+          html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer;border-color:#8050a0">`;
+          html+=`<span class="ss-libre-txt" style="color:#b080d0">+ asignar peón</span>`;
           html+=`</div>`;
         }
         html+=`</div></div>`;
@@ -846,7 +846,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const peonAsig=Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"));
     if(peonAsig.length>0){
       html+=`<div class="rotacion-grid" style="margin-top:10px">`;
-      html+=`<div class="rotacion-sector-label" style="color:#7ab648">🧹 Peones</div>`;
+      html+=`<div class="rotacion-sector-label" style="color:#b080d0">🧹 Peones</div>`;
       sectoresPeon.filter(s=>isDisp(s)).forEach(s=>{
         const asigEnSector=peonAsig.filter(([k])=>k.startsWith("peon_"+s.id+"___"));
         if(asigEnSector.length===0) return;
@@ -854,8 +854,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html+=`<div class="rotacion-sector-row">`;
         asigEnSector.forEach(([,v])=>{
           const p=peones.find(p=>p.id===v.mozoId);
-          html+=`<div class="rotacion-chip" style="border-color:#7ab648;background:linear-gradient(135deg,#1a3014,#203a1a)">`;
-          html+=`<span class="rotacion-chip-mozo" style="color:#a8d878">${p?p.nombre:"—"}</span>`;
+          html+=`<div class="rotacion-chip" style="border-color:#b080d0;background:linear-gradient(135deg,#2a1a3a,#302040)">`;
+          html+=`<span class="rotacion-chip-mozo" style="color:#d0a0f0">${p?p.nombre:"—"}</span>`;
           html+=`</div>`;
         });
         html+=`</div>`;
@@ -1706,7 +1706,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Sectores de peones
     const hasPeonAsig = sectoresPeon.filter(s=>isDisp(s)).length>0;
     if(hasPeonAsig){
-      html += `<div class="pres-sector-label" style="color:#7ab648;border-color:#7ab648">🧹 Peones</div>`;
+      html += `<div class="pres-sector-label" style="color:#b080d0;border-color:#b080d0">🧹 Peones</div>`;
       sectoresPeon.filter(s=>isDisp(s)).forEach(s=>{
         const peonEnSector = Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"+s.id+"___"));
         if(peonEnSector.length===0) return;
@@ -1714,7 +1714,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html += `<div class="pres-sector-row">`;
         peonEnSector.forEach(([,a])=>{
           const p = peones.find(p=>p.id===a.mozoId);
-          html += presCard(p?p.nombre:"", p?{nombre:p.nombre,emoji:"🧹"}:null, false, "#7ab648");
+          html += presCard(p?p.nombre:"", p?{nombre:p.nombre,emoji:"🧹"}:null, false, "#b080d0");
         });
         html += `</div>`;
       });
