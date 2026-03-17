@@ -191,8 +191,10 @@ body.turno-noche .stat-num{color:#90cfe0}
 .sector-cfg-row.drag-over{border-color:var(--gold);background:rgba(201,147,58,.08)}
 .drag-handle{font-size:16px;color:var(--text3);cursor:grab;padding:0 4px;flex-shrink:0}
 
+#barra-op-section{border-color:var(--gold)}
 #barra-op-section .sector-row{border-bottom:none}
 #barra-op-section .sector-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+#peones-op-section{border-color:var(--gold)}
 #peones-op-section .sector-row{border-bottom:none}
 #peones-op-section .sector-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
 
