@@ -214,10 +214,10 @@ body.turno-noche .stat-num{color:#90cfe0}
 .rotacion-chip-mozo{font-size:13px;font-weight:600;color:#a8d878}
 
 /* MODO PRESENTACION */
-.pres-sector-label{font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.6px;padding:16px 0 8px;border-bottom:1px solid var(--border2);margin-bottom:10px}
-.pres-sector-label-sub{font-size:11px;padding:10px 0 6px;color:var(--text2);border-bottom:1px solid var(--border)}
-.pres-sector-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
-.pres-card{background:var(--bg2);border:1px solid;border-radius:10px;padding:14px 18px;min-width:130px;display:flex;flex-direction:column;gap:6px}
-.pres-card-nombre{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
-.pres-card-mozo{font-size:22px;font-weight:700}
-.pres-card-libre{font-size:13px;color:var(--text3);font-style:italic}
+.pres-sector-label{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;padding:8px 0 4px;border-bottom:1px solid var(--border2);margin-bottom:6px}
+.pres-sector-label-sub{font-size:10px;padding:4px 0 3px;color:var(--text2);border-bottom:1px solid var(--border)}
+.pres-sector-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.pres-card{background:var(--bg2);border:1px solid;border-radius:8px;padding:8px 12px;min-width:100px;display:flex;flex-direction:column;gap:2px}
+.pres-card-nombre{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
+.pres-card-mozo{font-size:16px;font-weight:700}
+.pres-card-libre{font-size:11px;color:var(--text3);font-style:italic}
