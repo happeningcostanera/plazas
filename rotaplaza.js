@@ -1204,7 +1204,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(libres.length===0) opc.innerHTML=`<div class="empty">No hay mozos libres.</div>`;
     else opc.innerHTML=libres.map(m=>{
       const rest=(m.restricciones||[]).includes(slotId);
-      return `<div class="mozo-option ${rest?"restringido":""}" ${rest?"":` onclick="asignarManual('${m.id}')"`}>
+      return `<div class="mozo-option ${rest?"restringido":""}" onclick="${rest?`asignarExcepcion('${m.id}')`:`asignarManual('${m.id}')`}">
         <span class="emoji">${m.emoji}</span><span class="mname">${m.nombre}</span>
         ${rest?`<span class="rest-label">🚫 restringido</span>`:""}
       </div>`;
@@ -1212,6 +1212,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     document.getElementById("popup-overlay").classList.add("show");
   };
   window.cerrarPopup = function() { document.getElementById("popup-overlay").classList.remove("show"); popupSlotId=null; };
+  window.asignarExcepcion = function(mozoId) {
+    const mozo=mozos.find(m=>m.id===mozoId);
+    if(!mozo) return;
+    if(confirm(`${mozo.nombre} tiene restricción en esta plaza.\n¿Asignar por esta vez?`)) asignarManual(mozoId);
+  };
   window.asignarManual = async function(mozoId) {
     if(!popupSlotId) return;
     const slot=getSlots().find(s=>s.slotId===popupSlotId);
