@@ -24,6 +24,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
   let notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
+  let notasActivas=true;
 
   // Campo de disponibilidad por turno (fallback a "disponible" para datos existentes)
   const dispKey = turnoValido ? "disponible_" + turno : "disponible";
@@ -62,6 +63,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   let ultimaRotacionNotas={};
   onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => { if(snap.exists()){ultimaRotacionTs=snap.data().ts;ultimaRotacionNotas=snap.data().notas||{};}else{ultimaRotacionTs=null;ultimaRotacionNotas={};} renderUltimaRotacion(); });
   onSnapshot(doc(db,"meta","rotacion"+metaSuffix), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
+  onSnapshot(doc(db,"meta","config"), snap => {
+    if(snap.exists()){
+      notasActivas=snap.data().notasActivas!==false;
+    }
+    const sw=document.getElementById("switch-notas"); if(sw) sw.checked=notasActivas;
+    const ns=document.getElementById("notas-section"); if(ns) ns.style.display=notasActivas?"":"none";
+  });
   onSnapshot(doc(db,"meta","notas"+metaSuffix), snap => {
     if(snap.exists()){
       notas=snap.data();
@@ -162,11 +170,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     await batch.commit();
   }
 
-  function getSlots() {
-    // Solo subsectores activos dentro de sectores activos (excluye sectores de barra)
+  function getSlots(soloActivos=true) {
     const slots=[];
-    sectores.filter(s=>isDisp(s)).forEach(s=>{
-      const subs=(s.subsectores||[]).filter(ss=>isDisp(ss));
+    (soloActivos?sectores.filter(s=>isDisp(s)):sectores).forEach(s=>{
+      const subs=soloActivos?(s.subsectores||[]).filter(ss=>isDisp(ss)):(s.subsectores||[]);
       subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss.nombre}));
     });
     return slots;
@@ -205,13 +212,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(btnLib) btnLib.style.display=Object.keys(asignaciones).length>0?"inline-block":"none";
     renderSectoresGrid(); renderLibres(); renderPersonal(); renderSectoresConfig(); renderBarraGrid(); renderPeonesGrid();
     ["nota-pesca","nota-dolar","nota-sugerencia","nota-faltantes"].forEach(id=>{const el=document.getElementById(id);if(el) el.disabled=formacionBloqueada;});
+    const ns=document.getElementById("notas-section"); if(ns) ns.style.display=notasActivas?"":"none";
   }
 
   function renderStats() {
     const mDisp=mozos.filter(m=>isDisp(m));
     const slots=getSlots();
     const libres=mDisp.filter(m=>!Object.values(asignaciones).some(a=>a.mozoId===m.id));
-    const asigNormales=Object.keys(asignaciones).filter(id=>!id.startsWith("bar_")).length;
+    const asigNormales=Object.keys(asignaciones).filter(id=>!id.startsWith("bar_")&&!id.startsWith("peon_")).length;
     const barraDisp=mozosBar.filter(m=>isDisp(m));
     document.getElementById("st-mozos").textContent=mDisp.length;
     document.getElementById("st-slots").textContent=slots.length;
@@ -493,9 +501,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   function renderPersonal() {
-    document.getElementById("mozos-list").innerHTML=mozos.map(m=>{
-      const restTags=(m.restricciones||[]).map(slotId=>{
-        const sl=getSlots().find(s=>s.slotId===slotId);
+    document.getElementById("mozos-list").innerHTML=[...mozos].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(m=>{
+      const allSlots=getSlots(false);
+      const huerfanas=(m.restricciones||[]).filter(slotId=>!allSlots.find(s=>s.slotId===slotId));
+      if(huerfanas.length>0) setDoc(doc(mozosCol,m.id),{restricciones:(m.restricciones||[]).filter(r=>!huerfanas.includes(r))},{merge:true});
+      const restTags=(m.restricciones||[]).filter(slotId=>!huerfanas.includes(slotId)).map(slotId=>{
+        const sl=allSlots.find(s=>s.slotId===slotId);
         const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):slotId;
         return `<span class="rest-tag">🚫 ${label} <button onclick="quitarRestriccion('${m.id}','${slotId}')">×</button></span>`;
       }).join("");
@@ -518,7 +529,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const barList=document.getElementById("mozos-bar-list");
     if(barList) barList.innerHTML=mozosBar.length===0
       ? `<div class="empty">No hay mozos de barra aún.</div>`
-      : mozosBar.map(m=>`<div class="person-row">
+      : [...mozosBar].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(m=>`<div class="person-row">
         <span style="font-size:18px">🍸</span>
         <div class="person-info">
           <div class="person-name ${isDisp(m)?"":"off"}">${m.nombre}</div>
@@ -534,7 +545,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const peonList=document.getElementById("peones-list");
     if(peonList) peonList.innerHTML=peones.length===0
       ? `<div class="empty">No hay peones aún.</div>`
-      : peones.map(p=>`<div class="person-row">
+      : [...peones].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(p=>`<div class="person-row">
         <span style="font-size:18px">🧹</span>
         <div class="person-info">
           <div class="person-name ${isDisp(p)?"":"off"}">${p.nombre}</div>
@@ -606,7 +617,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   // Resolver nombre actual de un mozo desde un registro del historial (por ID o fallback nombre)
   function resolverNombreMozo(h) {
     const m=mozos.find(m=>m.id===h.mozoId);
-    return m?m.nombre:"";
+    return m?m.nombre:(h.mozoNombre||"");
   }
 
   function renderHistorial() {
@@ -627,7 +638,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       }
     }
 
-    let filtrado = historial;
+    let filtrado = historial.filter(h=>h.tipo!=="notas");
     if (filtroMozo)  filtrado = filtrado.filter(h => resolverNombreMozo(h) === filtroMozo);
     if (filtroFecha) filtrado = filtrado.filter(h => {
       if (!h.ts) return false;
@@ -685,7 +696,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     resumenEmpty.style.display="none";
 
     // Filtrar por fecha y/o mozo
-    let base = historial;
+    let base = historial.filter(h=>h.tipo!=="notas");
     if (filtroFecha) base = base.filter(h => {
       if (!h.ts) return false;
       return toYMD(h.ts) === filtroFecha;
@@ -800,8 +811,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const fecha=d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"long"});
     const hora=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false});
 
+    const mozosHist=rot.filter(h=>!h.tipo||h.tipo==="mozo");
+    const barraHist=rot.filter(h=>h.tipo==="barra");
+    const peonHist=rot.filter(h=>h.tipo==="peon");
+
     const porSector={};
-    rot.forEach(h=>{
+    mozosHist.forEach(h=>{
       const sec=h.sector||"Sin sector";
       if(!porSector[sec]) porSector[sec]=[];
       porSector[sec].push(h);
@@ -829,66 +844,64 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     html+=`</div>`;
 
-    // Barra y Peones en línea (50/50)
-    const barAsig=Object.entries(asignaciones).filter(([k])=>k.startsWith("bar_"));
-    const peonAsig=Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_"));
-    if(barAsig.length>0||peonAsig.length>0){
+    // Barra y Peones del historial en línea (50/50)
+    if(barraHist.length>0||peonHist.length>0){
       html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">`;
 
-      if(barAsig.length>0){
+      if(barraHist.length>0){
         html+=`<div style="flex:1;min-width:200px"><div class="rotacion-grid">`;
         html+=`<div class="rotacion-sector-label" style="color:#5a8fa0">🍸 Barra</div>`;
-        sectoresBar.filter(s=>isDisp(s)).forEach(s=>{
-          const subs=(s.subsectores||[]).filter(ss=>isDisp(ss));
-          const items=[];
-          subs.forEach(ss=>{
-            const slotId="bar_"+s.id+"___"+ss.id;
-            const asig=asignaciones[slotId];
-            if(!asig) return;
-            const mozo=mozosBar.find(m=>m.id===asig.mozoId);
-            items.push({ssNombre:ss.nombre,mozoNombre:mozo?mozo.nombre:"—"});
-          });
-          if(items.length===0) return;
-          html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${s.nombre}</div>`;
+        const barPorSector={};
+        barraHist.forEach(h=>{
+          const sec=h.sector||"";
+          if(!barPorSector[sec]) barPorSector[sec]=[];
+          barPorSector[sec].push(h);
+        });
+        for(const [sector,regs] of Object.entries(barPorSector)){
+          if(sector) html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${sector}</div>`;
           html+=`<div class="rotacion-sector-row">`;
-          items.forEach(item=>{
+          regs.forEach(h=>{
             html+=`<div class="rotacion-chip" style="border-color:#5a8fa0;background:linear-gradient(135deg,#14293a,#1a3040)">`;
-            html+=`<span class="rotacion-chip-ss">${item.ssNombre}</span>`;
-            html+=`<span class="rotacion-chip-mozo" style="color:#90cfe0">${item.mozoNombre}</span>`;
+            if(h.subsector) html+=`<span class="rotacion-chip-ss">${h.subsector}</span>`;
+            html+=`<span class="rotacion-chip-mozo" style="color:#90cfe0">${resolverNombreMozo(h)||"—"}</span>`;
             html+=`</div>`;
           });
           html+=`</div>`;
-        });
+        }
         html+=`</div></div>`;
       }
 
-      if(peonAsig.length>0){
+      if(peonHist.length>0){
         html+=`<div style="flex:1;min-width:200px"><div class="rotacion-grid">`;
         html+=`<div class="rotacion-sector-label" style="color:#b080d0">🧹 Peones</div>`;
-        sectoresPeon.filter(s=>isDisp(s)).forEach(s=>{
-          const asigEnSector=peonAsig.filter(([k])=>k.startsWith("peon_"+s.id+"___"));
-          if(asigEnSector.length===0) return;
-          html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${s.nombre}</div>`;
+        const peonPorSector={};
+        peonHist.forEach(h=>{
+          const sec=h.sector||"";
+          if(!peonPorSector[sec]) peonPorSector[sec]=[];
+          peonPorSector[sec].push(h);
+        });
+        for(const [sector,regs] of Object.entries(peonPorSector)){
+          if(sector) html+=`<div class="rotacion-sector-label" style="font-size:10px;color:var(--text2)">${sector}</div>`;
           html+=`<div class="rotacion-sector-row">`;
-          asigEnSector.forEach(([,v])=>{
-            const p=peones.find(p=>p.id===v.mozoId);
+          regs.forEach(h=>{
             html+=`<div class="rotacion-chip" style="border-color:#b080d0;background:linear-gradient(135deg,#2a1a3a,#302040)">`;
-            html+=`<span class="rotacion-chip-mozo" style="color:#d0a0f0">${p?p.nombre:"—"}</span>`;
+            html+=`<span class="rotacion-chip-mozo" style="color:#d0a0f0">${resolverNombreMozo(h)||"—"}</span>`;
             html+=`</div>`;
           });
           html+=`</div>`;
-        });
+        }
         html+=`</div></div>`;
       }
 
       html+=`</div>`;
     }
 
-    // Notas (solo última rotación)
-    if(rotPaginaActual===0){
-      const n=ultimaRotacionNotas;
+    // Notas de esta rotación (desde historial)
+    {
+      const notasReg=rot.find(h=>h.tipo==="notas");
+      const n=notasReg||{};
       const tieneNotas=n.pesca||n.dolar||n.sugerencia||n.faltantes;
-      if(tieneNotas){
+      if(tieneNotas&&notasActivas){
         html+=`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">`;
         html+=`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📝 Notas</div>`;
         html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">`;
@@ -1112,12 +1125,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) todasLasAsig.push({mozoId:asig.mozoId,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+      if(mozo) todasLasAsig.push({mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora});
     });
     // Después las rotadas automáticamente
     resultado.forEach(({mozoId,slot})=>{
       const mozo=mozos.find(m=>m.id===mozoId);
-      if(mozo) todasLasAsig.push({mozoId,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
+      if(mozo) todasLasAsig.push({mozoId,mozoNombre:mozo.nombre,sector:slot.sectorNombre,subsector:slot.ssNombre||"",tipo:"mozo",ts:ahora});
     });
     pendingHistorial=todasLasAsig.map((h,i)=>({...h,ts:ahora-i}));
     mostrarBannerPendiente();
@@ -1136,7 +1149,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) histActual.push({mozoId:asig.mozoId,sector:sl.sectorNombre,subsector:sl.ssNombre||"",ts:ahora});
+      if(mozo) histActual.push({mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora});
+    });
+    // Barra
+    const slotsBar=getSlotsBar();
+    slotsBar.forEach(sl=>{
+      const asig=asignaciones[sl.slotId];
+      if(!asig) return;
+      const mozo=mozosBar.find(m=>m.id===asig.mozoId);
+      if(mozo) histActual.push({mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"barra",ts:ahora});
+    });
+    // Peones
+    Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_")).forEach(([k,v])=>{
+      const parts=k.replace("peon_","").split("___");
+      const sectorId=parts[0];
+      const s=sectoresPeon.find(s=>s.id===sectorId);
+      const p=peones.find(p=>p.id===v.mozoId);
+      if(p) histActual.push({mozoId:v.mozoId,mozoNombre:p.nombre,sector:s?s.nombre:"",subsector:"",tipo:"peon",ts:ahora});
     });
     if(histActual.length===0) return;
 
@@ -1147,11 +1176,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       ultimaRotacionHistIds.forEach(id=>batch.delete(doc(histCol,id)));
     }
 
+    // Guardar notas como parte de la rotación
+    if(notasActivas&&(notas.pesca||notas.dolar||notas.sugerencia||notas.faltantes)){
+      histActual.push({tipo:"notas",pesca:notas.pesca||"",dolar:notas.dolar||"",sugerencia:notas.sugerencia||"",faltantes:notas.faltantes||"",ts:ahora});
+    }
+
     // Guardar nuevos registros y capturar sus IDs
     const newRefs=[];
     histActual.forEach((h,i)=>{
       const ref=doc(histCol);
-      batch.set(ref,{...h,ts:ahora-i});
+      batch.set(ref,{...h,ts:ahora-(h.tipo==="notas"?0:i)});
       newRefs.push(ref.id);
     });
 
@@ -1197,7 +1231,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     popupSlotId=slotId;
     const slot=getSlots().find(s=>s.slotId===slotId);
     const label=slot?(slot.ssNombre?`${slot.sectorNombre} › ${slot.ssNombre}`:slot.sectorNombre):slotId;
-    const libres=mozos.filter(m=>isDisp(m)&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
+    const libres=mozos.filter(m=>isDisp(m)&&!Object.values(asignaciones).some(a=>a.mozoId===m.id)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
     document.getElementById("popup-title").textContent="Asignar mozo";
     document.getElementById("popup-sub").textContent="📍 "+label;
     const opc=document.getElementById("popup-opciones");
@@ -1608,7 +1642,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const asigSet=new Set(asigEnSector);
     // Peones ya asignados en cualquier sector
     const peonAsigGlobal=new Set(Object.entries(asignaciones).filter(([k])=>k.startsWith("peon_")).map(([,v])=>v.mozoId));
-    document.getElementById("popup-opciones").innerHTML=peonDisp.map(p=>{
+    document.getElementById("popup-opciones").innerHTML=[...peonDisp].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(p=>{
       const enEsteSector=asigSet.has(p.id);
       const enOtro=!enEsteSector&&peonAsigGlobal.has(p.id);
       const disabled=enEsteSector;
@@ -1638,7 +1672,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const asignados=new Set(Object.entries(asignaciones)
       .filter(([k])=>k.startsWith("bar_"))
       .map(([,v])=>v.mozoId));
-    document.getElementById("popup-opciones").innerHTML=barDisp.map(m=>{
+    document.getElementById("popup-opciones").innerHTML=[...barDisp].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(m=>{
       const ocupado=asignados.has(m.id);
       return `<div class="popup-opcion ${ocupado?"restringido":""}" onclick="${ocupado?"":"window.asignarBarSlot('"+slotId+"','"+m.id+"')"}">
         🍸 ${m.nombre}${ocupado?" <small style='color:var(--text3)'>(ya asignado)</small>":""}
@@ -1782,7 +1816,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     // Notas del turno
     const tieneNotas = notas.pesca||notas.dolar||notas.sugerencia||notas.faltantes;
-    if(tieneNotas){
+    if(tieneNotas&&notasActivas){
       html += `<div class="pres-sector-label" style="color:var(--text2);border-color:var(--border2)">📝 Notas</div>`;
       html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">`;
       if(notas.pesca) html+=`<div style="flex:1;min-width:120px;border:1px solid var(--border2);border-radius:6px;padding:6px 10px"><span style="font-size:9px;color:var(--text3);text-transform:uppercase">🐟 Pesca</span><div style="font-size:13px;color:var(--text);margin-top:2px;white-space:pre-wrap">${notas.pesca}</div></div>`;
@@ -1895,6 +1929,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   // ===================== NOTAS DEL TURNO =====================
   let notasTimer=null;
+  window.toggleNotas = async function(val) {
+    notasActivas=val;
+    await setDoc(doc(db,"meta","config"),{notasActivas:val},{merge:true});
+    const ns=document.getElementById("notas-section"); if(ns) ns.style.display=val?"":"none";
+  };
+
   window.guardarNotas = function() {
     clearTimeout(notasTimer);
     notasTimer=setTimeout(()=>{
