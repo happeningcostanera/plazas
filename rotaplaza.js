@@ -1246,6 +1246,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const batch=writeBatch(db);
     ocupadas.forEach(id=>batch.delete(doc(asigCol,id)));
     batch.set(doc(db,"meta","notas"+metaSuffix),{pesca:"",dolar:"",sugerencia:"",faltantes:""});
+    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:Date.now(),notas:{}});
     await batch.commit();
     notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
     const np=document.getElementById("nota-pesca"); if(np) np.value="";
