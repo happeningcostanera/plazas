@@ -237,7 +237,7 @@
         <div class="step-num">2</div>
         <div class="step-text">Marcar las plazas donde ese mozo <strong style="color: white !important;">no puede</strong> ser asignado (por limitaciones físicas, preferencias, etc.).</div>
       </div>
-      <div class="tip">Las restricciones se respetan tanto en la rotación automática como en la asignación manual.</div>
+      <div class="tip">Las restricciones se respetan en la rotación automática. En la asignación manual, el mozo restringido aparece marcado pero se puede asignar como <strong style="color: white !important;">excepción puntual</strong> confirmando en el popup. La restricción no se elimina.</div>
 
       <div class="divider"></div>
       <h3>Eliminar un mozo</h3>
@@ -342,7 +342,7 @@
 
       <div class="divider"></div>
       <h3>Asignar manualmente antes de rotar</h3>
-      <p>Para forzar a un mozo en una plaza específica (situación especial), asignar <strong>antes</strong> de generar la plaza. La rotación respetar las asignaciones previas y distribuir el resto.</p>
+      <p>Para forzar a un mozo en una plaza específica (situación especial), asignar <strong>antes</strong> de generar la plaza. La rotación respeta las asignaciones previas y distribuir el resto.</p>
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-text">Tocar una plaza vacía en el mapa de sectores.</div>
@@ -377,11 +377,11 @@
 
       <div class="divider"></div>
       <h3>Liberar todo</h3>
-      <p>El botón <strong>🔓 Liberar todo</strong> vaciar todas las plazas. Está siempre disponible.</p>
+      <p>El botón <strong>🔓 Liberar todo</strong> vacía todas las plazas. Está siempre disponible.</p>
 
       <div class="divider"></div>
       <h3>Lógica de la rotación</h3>
-      <p>El sistema busca que cada mozo <strong>avance al siguiente sector</strong> (o grupo) en el orden configurado. Además considerar:</p>
+      <p>El sistema busca que cada mozo <strong>avance al siguiente sector</strong> (o grupo) en el orden configurado. Además considera:</p>
       <div class="step">
         <div class="step-num">•</div>
         <div class="step-text">Cantidad de veces que cada mozo estuvo en cada plaza (para equilibrar).</div>
@@ -427,7 +427,98 @@
 
       <div class="divider"></div>
       <h3>Mozos de barra</h3>
-      <p>Agregar desde la pestaña <strong>Personal</strong>, en la sección "Mozos de Barra". Funcionan igual que los mozos de salón pero se asignan solo a sectores de barra.</p>
+      <p>Agregar desde la pestaña <strong>Personal</strong>, en la sección <strong>Mozos de Barra</strong>. Funcionan igual que los mozos de salón pero se asignan solo a sectores de barra.</p>
+
+      <div class="tip">La barra no participa de la rotación automática. Se asigna siempre de forma manual.</div>
+      <div class="warn">Al confirmar la formación, las asignaciones de barra quedan <strong style="color: white !important;">bloqueadas</strong> junto con las de mozos y peones.</div>
+    </div>
+  </div>
+
+  <!-- PEONES -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">🧹</span>Peones</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <p>Los peones son el personal de limpieza. Funcionan de forma independiente a los mozos y a la barra.</p>
+
+      <div class="divider"></div>
+      <h3>Sectores de peones</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">En la pestaña <strong>Peones</strong>, agregar sectores (ej: "Salón", "Depósito", "Bacha").</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Cada sector puede tener <strong style="color: white !important;">más de un peón</strong> asignado al mismo tiempo.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Asignar peones</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">En la grilla de operación, tocar <strong>+ asignar peón</strong> dentro del sector deseado.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Elegir el peón en el popup. Se pueden agregar varios al mismo sector.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Personal de peones</h3>
+      <p>Agregar y gestionar desde la pestaña <strong>Personal</strong>, en la sección <strong>Peones</strong>. Funcionan igual que los mozos: activar, desactivar, editar y eliminar.</p>
+
+      <div class="tip">Los peones no participan de la rotación automática. Se asignan siempre de forma manual.</div>
+      <div class="warn">Al confirmar la formación, las asignaciones de peones quedan <strong style="color: white !important;">bloqueadas</strong> junto con las de barra y mozos.</div>
+    </div>
+  </div>
+
+  <!-- NOTAS DEL TURNO -->
+  <div class="section">
+    <button class="section-btn" onclick="toggle(this)">
+      <span><span class="icon">📝</span>Notas del turno</span>
+      <span class="arrow">▶</span>
+    </button>
+    <div class="section-body">
+      <p>Debajo de la grilla de operación hay cuatro campos de texto libre para registrar información del turno:</p>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text"><strong>Pesca:</strong> información sobre la pesca del día.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text"><strong>Dólar:</strong> cotización del día (se formatea automáticamente con el signo $).</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text"><strong>Sugerencia:</strong> sugerencia del chef o del día.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text"><strong>Faltantes:</strong> productos o insumos que faltan.</div>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Guardado automático</h3>
+      <p>Las notas se guardan <strong style="color: white !important;">automáticamente</strong> mientras se escriben y se sincronizan en tiempo real entre dispositivos.</p>
+
+      <div class="divider"></div>
+      <h3>En la rotación</h3>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Al <strong>confirmar</strong> la formación, las notas se guardan junto con la rotación.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Se muestran en la vista <strong>Pantalla</strong> y en la sección <strong>Plazas</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">•</div>
+        <div class="step-text">Al <strong>Liberar todo</strong>, las notas se <strong style="color: white !important;">borran</strong> para el próximo turno.</div>
+      </div>
+
+      <div class="warn">Los campos de notas se bloquean al confirmar la formación. Usar <strong>Editar</strong> para modificarlos.</div>
     </div>
   </div>
 
@@ -450,6 +541,14 @@
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-text">La primera tarjeta siempre es la <strong>última rotación</strong> (la más reciente).</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Cada tarjeta incluye las asignaciones de <strong>barra</strong> y <strong>peones</strong> debajo de los sectores de salón.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">Si la rotación tenía <strong>notas del turno</strong>, se muestran al pie de la tarjeta.</div>
       </div>
     </div>
   </div>
@@ -497,7 +596,7 @@
 
       <div class="divider"></div>
       <h3>Ver en pantalla</h3>
-      <p>Tocar el botón <strong>Pantalla</strong> para abrir una vista a pantalla completa con la formación. Ideal para mostrar en un monitor o TV del restaurante.</p>
+      <p>Tocar el botón <strong>Pantalla</strong> para abrir una vista a pantalla completa con la formación. Incluye mozos, barra, peones y notas del turno. Ideal para mostrar en un monitor o TV del restaurante.</p>
       <div class="tip">Tocar "✕ Salir" abajo a la derecha para volver a la app.</div>
     </div>
   </div>
@@ -523,7 +622,7 @@
       </div>
       <div class="step">
         <div class="step-num">4</div>
-        <div class="step-text">Para forzar una posición, <strong style="color: white !important;">asignar manualmente antes de generar la plaza</strong>. La rotación respetar esas asignaciones.</div>
+        <div class="step-text">Para forzar una posición, <strong style="color: white !important;">asignar manualmente antes de generar la plaza</strong>. La rotación respeta esas asignaciones.</div>
       </div>
       <div class="step">
         <div class="step-num">5</div>
