@@ -20,7 +20,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   const turno = new URLSearchParams(location.search).get("turno");
   const turnoValido = TURNOS_VALIDOS.includes(turno);
 
-  let popupSlotId=null, restMozoId=null, editCtx=null;
+  let popupSlotId=null, restMozoId=null, fijaMozoId=null, editCtx=null;
   let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
   let notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
@@ -502,6 +502,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const allSlots=getSlots(false);
       const huerfanas=(m.restricciones||[]).filter(slotId=>!allSlots.find(s=>s.slotId===slotId));
       if(huerfanas.length>0) setDoc(doc(mozosCol,m.id),{restricciones:(m.restricciones||[]).filter(r=>!huerfanas.includes(r))},{merge:true});
+      if(m.plazaFija&&!allSlots.find(s=>s.slotId===m.plazaFija)) setDoc(doc(mozosCol,m.id),{plazaFija:null},{merge:true});
+      const fijaTag=m.plazaFija?(()=>{
+        const sl=allSlots.find(s=>s.slotId===m.plazaFija);
+        const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):m.plazaFija;
+        return `<span class="rest-tag" style="border-color:var(--gold);color:var(--gold2)">📌 ${label} <button onclick="setPlazaFija('${m.id}',null)">×</button></span>`;
+      })():"";
       const restTags=(m.restricciones||[]).filter(slotId=>!huerfanas.includes(slotId)).map(slotId=>{
         const sl=allSlots.find(s=>s.slotId===slotId);
         const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):slotId;
@@ -511,9 +517,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         <span style="font-size:18px">${m.emoji}</span>
         <div class="person-info">
           <div class="person-name ${isDisp(m)?"":"off"}">${m.nombre}</div>
-          <div class="restricciones-tags">${restTags}</div>
+          <div class="restricciones-tags">${fijaTag}${restTags}</div>
         </div>
         <div class="person-actions">
+          <button class="btn btn-ghost" onclick="abrirPlazaFija('${m.id}')" title="Plaza fija">📌</button>
           <button class="btn btn-orange" onclick="abrirRestricciones('${m.id}')">🚫</button>
           <button class="btn btn-ghost"  onclick="abrirEdicion('mozo','${m.id}')">✏️</button>
           <button class="btn ${isDisp(m)?"btn-gold":"btn-green"}" onclick="toggleMozo('${m.id}',${!isDisp(m)})">${isDisp(m)?"Desactivar":"Activar"}</button>
@@ -1007,6 +1014,26 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       }
     });
 
+    // Pre-asignar plazas fijas
+    const batchFija=writeBatch(db);
+    let fijaCount=0;
+    const fijaAsignaciones={};
+    mDisp.forEach(m=>{
+      if(!m.plazaFija) return;
+      if(mozosPreAsignados.has(m.id)) return;
+      if(slotsPreAsignados.has(m.plazaFija)) return;
+      if(!slots.find(sl=>sl.slotId===m.plazaFija)) return;
+      if((m.restricciones||[]).includes(m.plazaFija)) return;
+      slotsPreAsignados.add(m.plazaFija);
+      mozosPreAsignados.add(m.id);
+      fijaAsignaciones[m.plazaFija]={mozoId:m.id,desde:Date.now()};
+      batchFija.set(doc(asigCol,m.plazaFija),fijaAsignaciones[m.plazaFija]);
+      fijaCount++;
+    });
+    if(fijaCount>0) await batchFija.commit();
+    // Actualizar asignaciones locales para que el historial las incluya
+    Object.assign(asignaciones,fijaAsignaciones);
+
     const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
     const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
 
@@ -1278,11 +1305,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       // En modo edición/rotación pendiente: solo asignar, el historial se graba al confirmar
       await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
     } else {
-      // Asignación suelta (sin rotación pendiente): guardar en historial directamente
-      const batch=writeBatch(db);
-      batch.set(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
-      batch.set(doc(histCol),{mozoId,sector:slot.sectorNombre,subsector:slot.ssNombre||"",ts:ahora});
-      await batch.commit();
+      // Asignación suelta: solo asignar, el historial se graba al confirmar
+      await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
     }
     cerrarPopup();
   };
@@ -1343,6 +1367,33 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.quitarRestriccion = async function(mozoId,slotId) {
     const mozo=mozos.find(m=>m.id===mozoId);
     await setDoc(doc(mozosCol,mozoId),{restricciones:(mozo.restricciones||[]).filter(r=>r!==slotId)},{merge:true});
+  };
+
+  // ===================== PLAZA FIJA =====================
+  window.abrirPlazaFija = function(mozoId) {
+    fijaMozoId=mozoId;
+    const mozo=mozos.find(m=>m.id===mozoId);
+    const slots=getSlots(false);
+    document.getElementById("fija-title").textContent="📌 "+mozo.nombre;
+    const opc=document.getElementById("fija-opciones");
+    if(slots.length===0){opc.innerHTML=`<div class="empty">No hay slots.</div>`;return;}
+    opc.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--bg);border:1px solid ${!mozo.plazaFija?"var(--gold)":"var(--border)"};margin-bottom:6px">
+      <span style="flex:1;font-size:12px;color:var(--text)">— Sin plaza fija —</span>
+      <button class="btn ${!mozo.plazaFija?"btn-gold":"btn-ghost"}" onclick="setPlazaFija('${mozoId}',null)">${!mozo.plazaFija?"✓ Actual":"Quitar"}</button>
+    </div>`+slots.map(sl=>{
+      const label=sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre;
+      const selected=mozo.plazaFija===sl.slotId;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--bg);border:1px solid ${selected?"var(--gold)":"var(--border)"};margin-bottom:6px">
+        <span style="flex:1;font-size:12px;color:${selected?"var(--gold2)":"var(--text)"}">${label}</span>
+        <button class="btn ${selected?"btn-gold":"btn-ghost"}" onclick="setPlazaFija('${mozoId}','${sl.slotId}')">${selected?"✓ Fija":"Fijar"}</button>
+      </div>`;
+    }).join("");
+    document.getElementById("fija-overlay").classList.add("show");
+  };
+  window.cerrarPlazaFija = function() { document.getElementById("fija-overlay").classList.remove("show"); fijaMozoId=null; };
+  window.setPlazaFija = async function(mozoId,slotId) {
+    await setDoc(doc(mozosCol,mozoId),{plazaFija:slotId||null},{merge:true});
+    if(fijaMozoId) setTimeout(()=>abrirPlazaFija(mozoId),50);
   };
 
   // ===================== EDICION =====================

@@ -306,6 +306,16 @@
   </div>
 </div>
 
+<!-- POPUP PLAZA FIJA -->
+<div id="fija-overlay" class="overlay" onclick="cerrarPlazaFija()">
+  <div class="popup-box" onclick="event.stopPropagation()">
+    <div class="popup-title" id="fija-title">Plaza Fija</div>
+    <div class="popup-sub">Slot donde este mozo va siempre</div>
+    <div id="fija-opciones"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="cerrarPlazaFija()">Cerrar</button>
+  </div>
+</div>
+
 <!-- MODO PRESENTACION -->
 <div id="presentacion-overlay" style="display:none;position:fixed;inset:0;background:#0f0b06;z-index:200;overflow-y:auto">
   <div style="max-width:900px;margin:0 auto;padding:12px 16px 60px">
