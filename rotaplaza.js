@@ -284,7 +284,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           if(mozo){
             html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
             if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
-            html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
           } else {
             if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
@@ -305,7 +304,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         if(mozo){
           html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
           if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
-          html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
           if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
         } else {
           if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
@@ -346,8 +344,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             html+=`<span class="ss-nombre">${ss.nombre}</span>`;
             if(mozo){
               html+=`<span class="ss-mozo" style="color:#90cfe0">${mozo.nombre}</span>`;
-              html+=`<span class="ss-hora">desde ${asig.desde?fmtHora(asig.desde):""}</span>`;
-              if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
+                if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             } else {
               if(!formacionBloqueada) html+=`<span class="ss-libre-txt">Libre — tap para asignar</span>`;
             }
@@ -761,9 +758,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   function agruparRotaciones() {
     rotacionesAgrupadas=[];
+    // Agrupar por rotacionId si existe, si no por proximidad de timestamp (backward compat)
+    const porId={};
+    const sinId=[];
+    historial.forEach(h=>{
+      if(h.rotacionId){
+        if(!porId[h.rotacionId]) porId[h.rotacionId]=[];
+        porId[h.rotacionId].push(h);
+      } else {
+        sinId.push(h);
+      }
+    });
+    // Rotaciones con ID, ordenadas por timestamp del primer registro desc
+    const conId=Object.values(porId).sort((a,b)=>b[0].ts-a[0].ts);
+    conId.forEach(g=>rotacionesAgrupadas.push(g));
+    // Backward compat: agrupar registros sin rotacionId por proximidad
     let rotActual=[];
     const UMBRAL_MS=5000;
-    for(const h of historial){
+    for(const h of sinId){
       if(!h.ts) continue;
       if(rotActual.length===0){
         rotActual.push(h);
@@ -778,6 +790,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       }
     }
     if(rotActual.length>1) rotacionesAgrupadas.push(rotActual);
+    // Ordenar todo por timestamp desc
+    rotacionesAgrupadas.sort((a,b)=>b[0].ts-a[0].ts);
   }
 
   function renderRotaciones() {
@@ -822,10 +836,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       porSector[sec].push(h);
     });
 
+    const rotId=rot[0].rotacionId||"";
     let html=`<div class="rotacion-card${rotPaginaActual===0?" rotacion-ultima":""}">`;
     html+=`<div class="rotacion-header">`;
     html+=`<span class="rotacion-fecha">${rotPaginaActual===0?"Última rotación — ":""}${fecha}</span>`;
     html+=`<span class="rotacion-hora">${hora} hs</span>`;
+    if(rotId) html+=`<span style="font-size:8px;color:var(--text3);opacity:.5;cursor:pointer" title="ID: ${rotId}" onclick="navigator.clipboard.writeText('${rotId}')">#${rotId.slice(-6)}</span>`;
     html+=`</div>`;
     html+=`<div class="rotacion-grid">`;
 
@@ -1139,6 +1155,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   // IDs de documentos del historial de la última rotación confirmada (para poder reemplazarlos al editar)
   let ultimaRotacionHistIds=[];
+  let ultimaRotacionId=null;
 
   window.confirmarRotacion = async function() {
     // Reconstruir historial desde las asignaciones actuales (refleja cualquier cambio manual)
@@ -1170,6 +1187,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(histActual.length===0) return;
 
     const batch=writeBatch(db);
+    const rotacionId=ultimaRotacionId||ahora.toString();
 
     // Si estamos re-confirmando (editando formación), borrar los registros anteriores
     if(ultimaRotacionHistIds.length>0){
@@ -1185,7 +1203,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const newRefs=[];
     histActual.forEach((h,i)=>{
       const ref=doc(histCol);
-      batch.set(ref,{...h,ts:ahora-(h.tipo==="notas"?0:i)});
+      batch.set(ref,{...h,rotacionId,ts:ahora-(h.tipo==="notas"?0:i)});
       newRefs.push(ref.id);
     });
 
@@ -1193,6 +1211,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     await batch.commit();
 
     ultimaRotacionHistIds=newRefs;
+    ultimaRotacionId=rotacionId;
     pendingHistorial=[];
     formacionBloqueada=true;
     document.getElementById("acciones-formacion").style.display="flex";
@@ -1289,6 +1308,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const nf=document.getElementById("nota-faltantes"); if(nf) nf.value="";
     pendingHistorial=[];
     ultimaRotacionHistIds=[];
+    ultimaRotacionId=null;
     formacionBloqueada=false;
     document.getElementById("acciones-formacion").style.display="none";
     ocultarBannerPendiente();
