@@ -226,6 +226,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     document.getElementById("st-asig").textContent=asigNormales;
     document.getElementById("st-libres").textContent=libres.length;
     document.getElementById("st-barra").textContent=barraDisp.length;
+    // Stats en Personal y Salón
+    const pa=document.getElementById("st-personal-activos"); if(pa) pa.textContent=mDisp.length;
+    const pt=document.getElementById("st-personal-total"); if(pt) pt.textContent=mozos.length;
+    const pp=document.getElementById("st-personal-plazas"); if(pp) pp.textContent=slots.length;
+    const sp=document.getElementById("st-salon-plazas"); if(sp) sp.textContent=slots.length;
+    const sm=document.getElementById("st-salon-mozos"); if(sm) sm.textContent=mDisp.length;
   }
 
   function renderAvisoGlobal() {
@@ -283,7 +289,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           html+=`<span class="ss-nombre">${ss.nombre}</span>`;
           if(mozo){
             html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
-            if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
+            if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
+            else if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
           } else {
             if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
@@ -303,7 +310,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html+=`<span class="ss-nombre">${s.nombre}</span>`;
         if(mozo){
           html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
-          if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
+          if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
+          else if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
         } else {
           if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
@@ -340,13 +348,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             const slotId="bar_"+s.id+"___"+ss.id;
             const asig=asignaciones[slotId];
             const mozo=asig?mozosBar.find(m=>m.id===asig.mozoId):null;
-            html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="${formacionBloqueada?"":"chipBarClick('"+slotId+"')"}" style="${mozo?"border-color:#5a8fa0;background:linear-gradient(135deg,#14293a,#1a3040)":"border-color:#5a8fa0"}">`;
+            html+=`<div class="ss-chip ${mozo?"ocupada":"libre"}" onclick="${formacionBloqueada?"":"chipBarClick('"+slotId+"')"}" style="border-color:#5a8fa0;${mozo?"background:linear-gradient(135deg,#14293a,#1a3040)":"background:linear-gradient(135deg,#0f1d2a,#142530)"}">`;
             html+=`<span class="ss-nombre">${ss.nombre}</span>`;
             if(mozo){
               html+=`<span class="ss-mozo" style="color:#90cfe0">${mozo.nombre}</span>`;
                 if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
             } else {
-              if(!formacionBloqueada) html+=`<span class="ss-libre-txt">Libre — tap para asignar</span>`;
+              if(!formacionBloqueada) html+=`<span class="ss-libre-txt" style="color:#90cfe0">Libre — tap para asignar</span>`;
             }
             html+=`</div>`;
           });
@@ -384,7 +392,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const barLibresList=document.getElementById("barra-libres-list");
     if(barLibresSec&&barLibresList){
       barLibresSec.style.display = (hasBarSectors && barLibres.length) ? "block" : "none";
-      barLibresList.innerHTML = barLibres.map(m=>`<span class="chip on">🍸 ${m.nombre}</span>`).join("");
+      barLibresList.innerHTML = barLibres.map(m=>`<span class="chip on" style="border-color:#5a8fa0;color:#90cfe0">🍸 ${m.nombre}</span>`).join("");
     }
 
     // Config sectores de barra
@@ -441,7 +449,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         }
         // Botón para agregar peón al sector (solo si no está bloqueado)
         if(!formacionBloqueada){
-          html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer;border-color:#8050a0">`;
+          html+=`<div class="ss-chip libre" onclick="chipPeonClick('${s.id}')" style="cursor:pointer;border-color:#8050a0;background:linear-gradient(135deg,#1a1028,#201530)">`;
           html+=`<span class="ss-libre-txt" style="color:#b080d0">+ asignar peón</span>`;
           html+=`</div>`;
         }
@@ -475,7 +483,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const peonLibresList=document.getElementById("peones-libres-list");
     if(peonLibresSec&&peonLibresList){
       peonLibresSec.style.display = (hasPeonSectors && peonLibres.length) ? "block" : "none";
-      peonLibresList.innerHTML = peonLibres.map(p=>`<span class="chip on">🧹 ${p.nombre}</span>`).join("");
+      peonLibresList.innerHTML = peonLibres.map(p=>`<span class="chip on" style="border-color:#8050a0;color:#d0a0f0">🧹 ${p.nombre}</span>`).join("");
     }
 
     // Config sectores de peones
@@ -860,6 +868,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html+=`<div class="rotacion-chip">`;
         html+=`<span class="rotacion-chip-ss">${ssNombre}</span>`;
         html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}</span>`;
+        if(h.comentario) html+=`<span style="font-size:9px;color:#f0c060;font-style:italic">💬 ${h.comentario}</span>`;
         html+=`</div>`;
       });
       html+=`</div>`;
@@ -1168,7 +1177,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) todasLasAsig.push({mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora});
+      if(mozo){const h={mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora};if(asig.comentario)h.comentario=asig.comentario;todasLasAsig.push(h);}
     });
     // Después las rotadas automáticamente
     resultado.forEach(({mozoId,slot})=>{
@@ -1193,7 +1202,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo) histActual.push({mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora});
+      if(mozo){const h={mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora};if(asig.comentario)h.comentario=asig.comentario;histActual.push(h);}
     });
     // Barra
     const slotsBar=getSlotsBar();
@@ -1270,7 +1279,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   // ===================== POPUP ASIGNACION =====================
   window.chipClick = function(slotId) {
     if(formacionBloqueada) return;
-    if(asignaciones[slotId]) return;
+    if(asignaciones[slotId]){abrirComentario(slotId);return;}
     abrirPopup(slotId);
   };
   window.abrirPopup = function(slotId) {
@@ -1394,6 +1403,33 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.setPlazaFija = async function(mozoId,slotId) {
     await setDoc(doc(mozosCol,mozoId),{plazaFija:slotId||null},{merge:true});
     if(fijaMozoId) setTimeout(()=>abrirPlazaFija(mozoId),50);
+  };
+
+  // ===================== COMENTARIO POR SLOT =====================
+  window.abrirComentario = function(slotId) {
+    const asig=asignaciones[slotId];
+    if(!asig) return;
+    const mozo=mozos.find(m=>m.id===asig.mozoId);
+    const slot=getSlots(false).find(s=>s.slotId===slotId);
+    const label=slot?(slot.ssNombre?`${slot.sectorNombre} › ${slot.ssNombre}`:slot.sectorNombre):slotId;
+    document.getElementById("comentario-title").textContent="💬 "+(mozo?mozo.nombre:"");
+    document.getElementById("comentario-sub").textContent="📍 "+label;
+    document.getElementById("comentario-input").value=asig.comentario||"";
+    document.getElementById("comentario-slotId").value=slotId;
+    document.getElementById("comentario-overlay").classList.add("show");
+    setTimeout(()=>document.getElementById("comentario-input").focus(),100);
+  };
+  window.cerrarComentario = function() { document.getElementById("comentario-overlay").classList.remove("show"); };
+  window.guardarComentario = async function() {
+    const slotId=document.getElementById("comentario-slotId").value;
+    const comentario=document.getElementById("comentario-input").value.trim();
+    await setDoc(doc(asigCol,slotId),{comentario},{merge:true});
+    cerrarComentario();
+  };
+  window.borrarComentario = async function() {
+    const slotId=document.getElementById("comentario-slotId").value;
+    await setDoc(doc(asigCol,slotId),{comentario:""},{merge:true});
+    cerrarComentario();
   };
 
   // ===================== EDICION =====================
@@ -1829,12 +1865,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           const slotId = s.id+"___"+ss.id;
           const asig = asignaciones[slotId];
           const mozo = asig ? mozos.find(m=>m.id===asig.mozoId) : null;
-          html += presCard(ss.nombre, mozo);
+          html += presCard(ss.nombre, mozo, false, null, asig?.comentario);
         });
       } else {
         const asig = asignaciones[s.id];
         const mozo = asig ? mozos.find(m=>m.id===asig.mozoId) : null;
-        html += presCard(s.nombre, mozo);
+        html += presCard(s.nombre, mozo, false, null, asig?.comentario);
       }
 
       html += `</div>`;
@@ -1902,7 +1938,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(overlay.requestFullscreen) overlay.requestFullscreen().catch(()=>{});
   };
 
-  function presCard(nombre, mozo, esBarra=false, customColor=null) {
+  function presCard(nombre, mozo, esBarra=false, customColor=null, comentario=null) {
     const borderColor = customColor || (esBarra ? "#5a8fa0" : "var(--gold)");
     const mozoColor = customColor || (esBarra ? "#90cfe0" : "#a8d878");
     return `<div class="pres-card" style="border-color:${borderColor}">
@@ -1911,6 +1947,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         ? `<div class="pres-card-mozo" style="color:${mozoColor}">${mozo.emoji||"🍸"} ${mozo.nombre}</div>`
         : `<div class="pres-card-libre">libre</div>`
       }
+      ${comentario?`<div style="font-size:9px;color:#f0c060;font-style:italic;margin-top:2px">💬 ${comentario}</div>`:""}
     </div>`;
   }
 
