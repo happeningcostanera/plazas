@@ -860,7 +860,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     html+=`</div>`;
     html+=`<div class="rotacion-grid">`;
 
-    for(const [sector, registros] of Object.entries(porSector)){
+    const sectorOrder=sectores.map(s=>s.nombre);
+    const sortedSectors=Object.keys(porSector).sort((a,b)=>{
+      const ia=sectorOrder.indexOf(a), ib=sectorOrder.indexOf(b);
+      if(ia===-1&&ib===-1) return a.localeCompare(b);
+      if(ia===-1) return 1;
+      if(ib===-1) return -1;
+      return ia-ib;
+    });
+    for(const sector of sortedSectors){
+      const registros=porSector[sector];
       html+=`<div class="rotacion-sector-label">${sector}</div>`;
       html+=`<div class="rotacion-sector-row">`;
       registros.forEach(h=>{
