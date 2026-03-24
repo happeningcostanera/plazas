@@ -61,7 +61,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); });
   const metaSuffix = turnoValido ? "_" + turno : "";
   let ultimaRotacionNotas={};
-  onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => { if(snap.exists()){ultimaRotacionTs=snap.data().ts;ultimaRotacionNotas=snap.data().notas||{};}else{ultimaRotacionTs=null;ultimaRotacionNotas={};} renderUltimaRotacion(); });
+  onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => {
+    if(snap.exists()){
+      ultimaRotacionTs=snap.data().ts;
+      ultimaRotacionNotas=snap.data().notas||{};
+      // Restaurar estado editable si hay rotacionId y no expiró
+      const d=snap.data();
+      if(d.rotacionId && d.editableHasta && Date.now()<d.editableHasta && !ultimaRotacionId){
+        ultimaRotacionId=d.rotacionId;
+        formacionBloqueada=true;
+        const af=document.getElementById("acciones-formacion"); if(af) af.style.display="flex";
+      }
+    }else{ultimaRotacionTs=null;ultimaRotacionNotas={};}
+    renderUltimaRotacion();
+  });
   onSnapshot(doc(db,"meta","rotacion"+metaSuffix), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
   onSnapshot(doc(db,"meta","config"), snap => {
     if(snap.exists()){
@@ -1247,7 +1260,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       batch.set(ref,{...h,rotacionId,ts:ahora-(h.tipo==="notas"?0:i)});
     });
 
-    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora,notas:{...notas}},{merge:true});
+    // Calcular límite de edición: mañana→17:00, noche→02:00 del día siguiente
+    const hoy=new Date(ahora);
+    let editableHasta;
+    if(turno==="noche"){
+      const manana=new Date(hoy); manana.setDate(manana.getDate()+1); manana.setHours(2,0,0,0);
+      editableHasta=manana.getTime();
+    } else {
+      const limite=new Date(hoy); limite.setHours(17,0,0,0);
+      editableHasta=limite.getTime();
+    }
+
+    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora,notas:{...notas},rotacionId,editableHasta},{merge:true});
     await batch.commit();
 
     ultimaRotacionId=rotacionId;
@@ -1335,7 +1359,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const batch=writeBatch(db);
     ocupadas.forEach(id=>batch.delete(doc(asigCol,id)));
     batch.set(doc(db,"meta","notas"+metaSuffix),{pesca:"",dolar:"",sugerencia:"",faltantes:""});
-    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:Date.now(),notas:{}});
+    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:Date.now(),notas:{},rotacionId:null,editableHasta:null});
     await batch.commit();
     notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
     const np=document.getElementById("nota-pesca"); if(np) np.value="";
