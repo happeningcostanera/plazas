@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
     getFirestore, collection, doc, onSnapshot,
-    setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs, getDoc
+    setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs, getDoc, where
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { firebaseConfig } from "./config.js";
@@ -1198,8 +1198,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(advertencias.length>0) setTimeout(()=>alert("Rotación con advertencias:\n\n"+advertencias.join("\n")),300);
   };
 
-  // IDs de documentos del historial de la última rotación confirmada (para poder reemplazarlos al editar)
-  let ultimaRotacionHistIds=[];
   let ultimaRotacionId=null;
 
   window.confirmarRotacion = async function() {
@@ -1231,31 +1229,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     });
     if(histActual.length===0) return;
 
-    const batch=writeBatch(db);
     const rotacionId=ultimaRotacionId||ahora.toString();
 
-    // Si estamos re-confirmando (editando formación), borrar los registros anteriores
-    if(ultimaRotacionHistIds.length>0){
-      ultimaRotacionHistIds.forEach(id=>batch.delete(doc(histCol,id)));
-    }
+    // Si estamos re-confirmando (editando formación), borrar los registros anteriores por rotacionId
+    const oldSnap = await getDocs(query(histCol, where("rotacionId","==",rotacionId)));
+    const batch=writeBatch(db);
+    oldSnap.docs.forEach(d=>batch.delete(d.ref));
 
     // Guardar notas como parte de la rotación
     if(notasActivas&&(notas.pesca||notas.dolar||notas.sugerencia||notas.faltantes)){
       histActual.push({tipo:"notas",pesca:notas.pesca||"",dolar:notas.dolar||"",sugerencia:notas.sugerencia||"",faltantes:notas.faltantes||"",ts:ahora});
     }
 
-    // Guardar nuevos registros y capturar sus IDs
-    const newRefs=[];
+    // Guardar nuevos registros
     histActual.forEach((h,i)=>{
       const ref=doc(histCol);
       batch.set(ref,{...h,rotacionId,ts:ahora-(h.tipo==="notas"?0:i)});
-      newRefs.push(ref.id);
     });
 
     batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{ts:ahora,notas:{...notas}},{merge:true});
     await batch.commit();
 
-    ultimaRotacionHistIds=newRefs;
     ultimaRotacionId=rotacionId;
     pendingHistorial=[];
     formacionBloqueada=true;
@@ -1349,7 +1343,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const ns=document.getElementById("nota-sugerencia"); if(ns) ns.value="";
     const nf=document.getElementById("nota-faltantes"); if(nf) nf.value="";
     pendingHistorial=[];
-    ultimaRotacionHistIds=[];
     ultimaRotacionId=null;
     formacionBloqueada=false;
     document.getElementById("acciones-formacion").style.display="none";
@@ -2023,7 +2016,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   }
 
   window.descartarRotacion = async function() {
-    const estaEditando=ultimaRotacionHistIds.length>0;
+    const estaEditando=ultimaRotacionId!==null;
     const msg=estaEditando
       ? "¿Descartar los cambios? La formación original se mantiene en el historial."
       : "¿Descartar la rotación pendiente? Las asignaciones actuales se mantienen pero no se guardan en el historial.";
