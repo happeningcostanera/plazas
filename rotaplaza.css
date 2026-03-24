@@ -194,11 +194,22 @@ select{appearance:none}
 #pendiente-banner .pb-btn-descartar{background:transparent;border:1px solid var(--red);color:#f0a0a0;border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 @keyframes pulse-banner{0%,100%{opacity:1}50%{opacity:.7}}
 
+/* TURNO MAÑANA */
+#header{border-top:4px solid #c9933a}
+#header{background:linear-gradient(135deg,rgba(201,147,58,.18),var(--bg3))}
+.tab-btn.active{border-color:#c9933a;color:#e8b866}
+
 /* TURNO NOCHE */
+body.turno-noche{--bg:#060b0f;--bg2:#081018;--bg3:#0e1a24;--border:#102a3a;--border2:#123040}
+body.turno-noche #header{border-top:4px solid #5a8fa0}
+body.turno-noche #header{background:linear-gradient(135deg,rgba(60,120,180,.18),var(--bg3))}
 body.turno-noche #header h1{color:#90cfe0}
+body.turno-noche .tab-btn.active{border-color:#5a8fa0;color:#90cfe0}
 body.turno-noche .btn-rotar{background:linear-gradient(135deg,#5a8fa0,#90cfe0)}
 body.turno-noche .section-title{color:#5a8fa0}
 body.turno-noche .stat-num{color:#90cfe0}
+body.turno-noche .btn-gold{background:#5a8fa0;color:#fff}
+body.turno-noche .chip.on{border-color:#5a8fa0;color:#90cfe0}
 
 .empty{text-align:center;color:var(--text3);padding:30px;font-size:13px}
 /* DRAG & DROP */
