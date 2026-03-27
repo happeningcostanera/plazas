@@ -529,6 +529,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):m.plazaFija;
         return `<span class="rest-tag" style="border-color:var(--gold);color:var(--gold2)">📌 ${label} <button onclick="setPlazaFija('${m.id}',null)">×</button></span>`;
       })():"";
+      const largoTag=m.largo?`<span class="rest-tag" style="border-color:#e06050;color:#f08070"><b>L</b> Largo <button onclick="toggleLargo('${m.id}',false)">×</button></span>`:"";
       const restTags=(m.restricciones||[]).filter(slotId=>!huerfanas.includes(slotId)).map(slotId=>{
         const sl=allSlots.find(s=>s.slotId===slotId);
         const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):slotId;
@@ -538,9 +539,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         <span style="font-size:18px">${m.emoji}</span>
         <div class="person-info">
           <div class="person-name ${isDisp(m)?"":"off"}">${m.nombre}</div>
-          <div class="restricciones-tags">${fijaTag}${restTags}</div>
+          <div class="restricciones-tags">${largoTag}${fijaTag}${restTags}</div>
         </div>
         <div class="person-actions">
+          <button class="btn ${m.largo?"btn-red":"btn-ghost"}" onclick="toggleLargo('${m.id}',${!m.largo})" title="Largo" style="font-weight:bold">L</button>
           <button class="btn btn-ghost" onclick="abrirPlazaFija('${m.id}')" title="Plaza fija">📌</button>
           <button class="btn btn-orange" onclick="abrirRestricciones('${m.id}')">🚫</button>
           <button class="btn btn-ghost"  onclick="abrirEdicion('mozo','${m.id}')">✏️</button>
@@ -1065,6 +1067,37 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Actualizar asignaciones locales para que el historial las incluya
     Object.assign(asignaciones,fijaAsignaciones);
 
+    // Asignar largos: uno por sector, distribuidos
+    const largos=mDisp.filter(m=>m.largo&&!mozosPreAsignados.has(m.id));
+    if(largos.length>0){
+      const sectoresUsadosLargo=new Set();
+      // Sectores ya ocupados por plaza fija de un largo
+      mDisp.filter(m=>m.largo&&mozosPreAsignados.has(m.id)).forEach(m=>{
+        const sl=slots.find(s=>s.slotId===m.plazaFija);
+        if(sl) sectoresUsadosLargo.add(sl.sectorId);
+      });
+      const batchLargo=writeBatch(db);
+      let largoCount=0;
+      const largoAsignaciones={};
+      for(const largo of largos){
+        // Buscar un slot libre en un sector que no tenga otro largo
+        const slotCandidato=slots.find(sl=>
+          !slotsPreAsignados.has(sl.slotId)&&
+          !sectoresUsadosLargo.has(sl.sectorId)&&
+          !(largo.restricciones||[]).includes(sl.slotId)
+        );
+        if(!slotCandidato) continue;
+        slotsPreAsignados.add(slotCandidato.slotId);
+        mozosPreAsignados.add(largo.id);
+        sectoresUsadosLargo.add(slotCandidato.sectorId);
+        largoAsignaciones[slotCandidato.slotId]={mozoId:largo.id,desde:Date.now()};
+        batchLargo.set(doc(asigCol,slotCandidato.slotId),largoAsignaciones[slotCandidato.slotId]);
+        largoCount++;
+      }
+      if(largoCount>0) await batchLargo.commit();
+      Object.assign(asignaciones,largoAsignaciones);
+    }
+
     const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
     const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
 
@@ -1426,6 +1459,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     document.getElementById("fija-overlay").classList.add("show");
   };
   window.cerrarPlazaFija = function() { document.getElementById("fija-overlay").classList.remove("show"); fijaMozoId=null; };
+  window.toggleLargo = async function(mozoId, valor) {
+    await setDoc(doc(mozosCol,mozoId),{largo:!!valor},{merge:true});
+  };
+
   window.setPlazaFija = async function(mozoId,slotId) {
     await setDoc(doc(mozosCol,mozoId),{plazaFija:slotId||null},{merge:true});
     if(fijaMozoId) setTimeout(()=>abrirPlazaFija(mozoId),50);
