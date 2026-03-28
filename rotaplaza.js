@@ -284,6 +284,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const tieneSubsActivos=subsActivos.length>0;
 
       if(!isDisp(s)) return; // skip inactive sectors entirely
+      if(!tieneSubsActivos) return; // skip sectors with no active subsectors
 
       // Sector label separator
       html+=`<div class="sector-label${firstSector?" first":""}">${s.nombre}</div>`;
