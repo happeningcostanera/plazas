@@ -187,7 +187,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const slots=[];
     (soloActivos?sectores.filter(s=>isDisp(s)):sectores).forEach(s=>{
       const subs=soloActivos?(s.subsectores||[]).filter(ss=>isDisp(ss)):(s.subsectores||[]);
-      subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss.nombre}));
+      subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss["nombre_"+turno]||ss.nombre}));
     });
     return slots;
   }
@@ -284,7 +284,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const tieneSubsActivos=subsActivos.length>0;
 
       if(!isDisp(s)) return; // skip inactive sectors entirely
-      if(!tieneSubsActivos) return; // skip sectors with no active subsectors
 
       // Sector label separator
       html+=`<div class="sector-label${firstSector?" first":""}">${s.nombre}</div>`;
@@ -300,7 +299,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             onclick="chipClick('${slotId}')"
             onpointerdown="startLongPress(event,'${slotId}','ss','${s.id}',${subsActivos.indexOf(ss)})"
             onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
-          html+=`<span class="ss-nombre">${ss.nombre}</span>`;
+          html+=`<span class="ss-nombre">${ss["nombre_"+turno]||ss.nombre}</span>`;
           if(mozo){
             html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
             if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
@@ -594,7 +593,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const canAdd=subs.length<MAX_SS_PER_SECTOR;
       const subsHtml=subs.map((ss,i)=>`
         <div class="ss-cfg-row" style="flex-wrap:wrap">
-          <span class="ss-cfg-name ${isDisp(ss)?"":"off"}" style="min-width:80px">${ss.nombre}</span>
+          <span class="ss-cfg-name ${isDisp(ss)?"":"off"}" style="min-width:80px">${ss["nombre_"+turno]||ss.nombre}</span>
           ${ss.descripcion?`<span style="font-size:10px;color:var(--text3);flex:1;font-style:italic">${ss.descripcion}</span>`:""}
           <button class="btn btn-ghost" onclick="abrirEdicion('subsector','${s.id}',${i})">✏️</button>
           <button class="btn ${isDisp(ss)?"btn-gold":"btn-green"}" onclick="toggleSubsector('${s.id}',${i},${!isDisp(ss)})">${isDisp(ss)?"Desact.":"Activ."}</button>
@@ -1502,7 +1501,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     let nombre="", desc="", showDesc=false;
     if(tipo==="mozo"){ nombre=mozos.find(m=>m.id===id)?.nombre||""; }
     else if(tipo==="sector"){ const s=sectores.find(s=>s.id===id); nombre=s?.nombre||""; desc=s?.descripcion||""; showDesc=true; }
-    else if(tipo==="subsector"){ const ss=sectores.find(s=>s.id===id)?.subsectores?.[idx]; nombre=ss?.nombre||""; desc=ss?.descripcion||""; showDesc=true; }
+    else if(tipo==="subsector"){ const ss=sectores.find(s=>s.id===id)?.subsectores?.[idx]; nombre=ss?.["nombre_"+turno]||ss?.nombre||""; desc=ss?.descripcion||""; showDesc=true; }
     document.getElementById("edit-title").textContent=`✏️ Editar ${tipo}`;
     document.getElementById("edit-nombre").value=nombre;
     document.getElementById("edit-desc").value=desc;
@@ -1525,10 +1524,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     } else if(tipo==="subsector"){
       const s=sectores.find(s=>s.id===id);
       const subs=[...(s.subsectores||[])];
-      const nombreViejo=subs[idx]?.nombre;
-      subs[idx]={...subs[idx],nombre,descripcion:desc};
+      subs[idx]={...subs[idx],["nombre_"+turno]:nombre,descripcion:desc};
       await setDoc(doc(sectoresCol,id),{subsectores:subs},{merge:true});
-      if(nombreViejo&&nombreViejo!==nombre){const snap=await getDocs(histCol);const batch=writeBatch(db);snap.docs.forEach(d=>{if(d.data().subsector===nombreViejo)batch.set(d.ref,{subsector:nombre},{merge:true});});await batch.commit();}
     }
     cerrarEdicion();
   };
@@ -1929,7 +1926,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           const slotId = s.id+"___"+ss.id;
           const asig = asignaciones[slotId];
           const mozo = asig ? mozos.find(m=>m.id===asig.mozoId) : null;
-          html += presCard(ss.nombre, mozo, false, null, asig?.comentario);
+          html += presCard(ss["nombre_"+turno]||ss.nombre, mozo, false, null, asig?.comentario);
         });
       } else {
         const asig = asignaciones[s.id];
