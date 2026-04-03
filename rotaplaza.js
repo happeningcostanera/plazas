@@ -1003,7 +1003,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     // Slots ya asignados manualmente y mozos ya usados
     const slotsLibres=slots.filter(sl=>!asignaciones[sl.slotId]);
-    const mozosYaAsignados=new Set(Object.values(asignaciones).filter(a=>slots.some(sl=>sl.slotId)).map(a=>a.mozoId));
+    const mozosYaAsignados=new Set(slots.filter(sl=>asignaciones[sl.slotId]).map(sl=>asignaciones[sl.slotId].mozoId));
     const mozosLibres=mDisp.filter(m=>!mozosYaAsignados.has(m.id));
     const nLibres=mozosLibres.length, pLibres=slotsLibres.length;
 
@@ -1187,30 +1187,34 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       return (ultimo===grupoSlot)?1:0;
     }
 
-    // Solo rotar slots libres, con mozos libres
-    for(let pi=0;pi<slotsLibres.length;pi++){
-      const slot=slotsLibres[pi];
-
-      const candidatos=[];
+    // Construir todos los pares mozo-slot con su score
+    const pares=[];
+    slotsLibres.forEach(slot=>{
       for(let mi=0;mi<n;mi++){
-        const circularPos=(idx+pi+mi)%n;
+        const circularPos=(idx+mi)%n;
         const mozo=mozosLibres[circularPos];
-        if(mozosUsados.has(mozo.id)) continue;
         if((mozo.restricciones||[]).includes(slot.slotId)) continue;
-        const dist=distanciaGrupo(mozo.id, slot.sectorId);
-        const penRepetir=penEvitarRepetir(mozo.id, slot.sectorId);
-        candidatos.push({mozo,veces:(conteo[mozo.id]?.[slot.slotId]||0),dist,penRepetir,circularPos:mi});
+        const dist=distanciaGrupo(mozo.id,slot.sectorId);
+        const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
+        pares.push({mozo,slot,dist,penRepetir,veces:(conteo[mozo.id]?.[slot.slotId]||0),circularPos:mi});
       }
-      if(candidatos.length===0){
-        advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
-        continue;
-      }
-      // Prioridad: 1) sector ideal (menor distancia), 2) evitar repetir, 3) menos veces en slot, 4) circular
-      candidatos.sort((a,b)=>a.dist-b.dist||a.penRepetir-b.penRepetir||a.veces-b.veces||a.circularPos-b.circularPos);
-      const elegido=candidatos[0].mozo;
-      resultado.push({slotId:slot.slotId,mozoId:elegido.id,slot});
-      mozosUsados.add(elegido.id);
+    });
+    // Ordenar globalmente: 1) sector ideal, 2) evitar repetir, 3) menos veces en slot, 4) circular
+    pares.sort((a,b)=>a.dist-b.dist||a.penRepetir-b.penRepetir||a.veces-b.veces||a.circularPos-b.circularPos);
+    // Asignar greedy global: tomar la mejor pareja disponible, sin repetir mozo ni slot
+    const slotsUsados=new Set();
+    for(const par of pares){
+      if(mozosUsados.has(par.mozo.id)) continue;
+      if(slotsUsados.has(par.slot.slotId)) continue;
+      resultado.push({slotId:par.slot.slotId,mozoId:par.mozo.id,slot:par.slot});
+      mozosUsados.add(par.mozo.id);
+      slotsUsados.add(par.slot.slotId);
     }
+    // Advertir slots que quedaron sin mozo (por restricciones)
+    slotsLibres.forEach(slot=>{
+      if(!slotsUsados.has(slot.slotId))
+        advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
+    });
 
     if(resultado.length===0){
       alert("⛔ No se pudo rotar:\n\n"+advertencias.join("\n"));
