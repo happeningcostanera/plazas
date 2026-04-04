@@ -71,6 +71,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         ultimaRotacionId=d.rotacionId;
         formacionBloqueada=true;
         const af=document.getElementById("acciones-formacion"); if(af) af.style.display="flex";
+        scheduleRenderAll();
       }
     }else{ultimaRotacionTs=null;ultimaRotacionNotas={};}
     renderUltimaRotacion();
