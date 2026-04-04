@@ -1109,14 +1109,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
     const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
 
-    // Calcular cuántas veces cada mozo estuvo en cada slot (historial completo)
+    // Calcular cuántas veces cada mozo estuvo en cada slot (últimos 30 días)
+    const treintaDias=Date.now()-30*24*60*60*1000;
+    const historialReciente=historial.filter(h=>h.ts>treintaDias);
     const conteo={};
     mozosLibres.forEach(m=>{ conteo[m.id]={}; slotsLibres.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
-    for(const h of historial){
+    for(const h of historialReciente){
       const mozo=mozosLibres.find(m=>m.id===h.mozoId);
       if(!mozo) continue;
-      const sl=slotsLibres.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
-                           ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
+      const sl=slotsLibres.find(s=>
+        (h.slotId&&s.slotId===h.slotId)||
+        (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
+        (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
+      );
       if(sl&&conteo[mozo.id]) conteo[mozo.id][sl.slotId]=(conteo[mozo.id][sl.slotId]||0)+1;
     }
 
@@ -1139,13 +1144,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       gruposEvitar.add(s.grupo||s.id);
     });
 
-    // Para cada mozo, averiguar en qué grupo estuvo en la última rotación
+    // Para cada mozo, averiguar en qué grupo estuvo en la última rotación (últimos 30 días)
     const ultimoGrupoPorMozo={};
     mozosLibres.forEach(m=>{
-      for(const h of historial){
+      for(const h of historialReciente){
         if(h.mozoId!==m.id) continue;
-        const sl=slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector
-                             ||(!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre));
+        const sl=slots.find(s=>
+          (h.slotId&&s.slotId===h.slotId)||
+          (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
+          (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
+        );
         if(sl){ ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId); break; }
       }
     });
@@ -1259,7 +1267,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo){const h={mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",tipo:"mozo",ts:ahora};if(asig.comentario)h.comentario=asig.comentario;histActual.push(h);}
+      if(mozo){const h={mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",slotId:sl.slotId,tipo:"mozo",ts:ahora};if(asig.comentario)h.comentario=asig.comentario;histActual.push(h);}
     });
     // Barra
     const slotsBar=getSlotsBar();
