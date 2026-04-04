@@ -1261,6 +1261,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.confirmarRotacion = async function() {
     // Reconstruir historial desde las asignaciones actuales (refleja cualquier cambio manual)
     const slots=getSlots();
+    const slotsLibres=slots.filter(sl=>!asignaciones[sl.slotId]);
+    if(slotsLibres.length>0){
+      const nombres=slotsLibres.map(sl=>sl.ssNombre||sl.sectorNombre).join(", ");
+      alert(`⛔ No se puede confirmar: hay ${slotsLibres.length} plaza${slotsLibres.length>1?"s":""} sin asignar:\n${nombres}`);
+      return;
+    }
     const ahora=Date.now();
     const histActual=[];
     slots.forEach(sl=>{
