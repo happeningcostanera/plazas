@@ -185,6 +185,10 @@ select{appearance:none}
   #notas-section > div { gap: 4px !important; }
   #notas-section > div > div { gap: 4px !important; }
   #notas-section > div > div > div { margin-bottom: 0 !important; }
+  /* Turno noche: overrides de color en PDF */
+  body.turno-noche #ultima-rotacion > div { border-bottom-color: #5a8fa0 !important; }
+  body.turno-noche #ultima-rotacion span:first-child { color: #2a6a80 !important; }
+  body.turno-noche #barra-op-section .section-title, body.turno-noche #peones-op-section .section-title { color: #2a6a80 !important; border-bottom-color: #5a8fa0 !important; }
 }
 
 /* BANNER PENDIENTE */
