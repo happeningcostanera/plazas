@@ -1196,29 +1196,70 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       return (ultimo===grupoSlot)?1:0;
     }
 
-    // Construir todos los pares mozo-slot con su score
-    const pares=[];
-    slotsLibres.forEach(slot=>{
-      for(let mi=0;mi<n;mi++){
-        const circularPos=(idx+mi)%n;
-        const mozo=mozosLibres[circularPos];
-        if((mozo.restricciones||[]).includes(slot.slotId)) continue;
+    // Construir matriz de costos (mozos en orden circular × slots)
+    // Pesos: dist×10000 + penRepetir×1000 + veces×10 + circularPos
+    // Las restricciones se marcan con INF para excluirlas de la asignación óptima
+    const INF = 1e9;
+    const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
+    const costMatrix = mozosCirular.map((mozo,mi) =>
+      slotsLibres.map(slot => {
+        if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
         const dist=distanciaGrupo(mozo.id,slot.sectorId);
         const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
-        pares.push({mozo,slot,dist,penRepetir,veces:(conteo[mozo.id]?.[slot.slotId]||0),circularPos:mi});
+        const veces=conteo[mozo.id]?.[slot.slotId]||0;
+        return dist*10000 + penRepetir*1000 + veces*10 + mi;
+      })
+    );
+
+    // Algoritmo de Hungarian (Kuhn-Munkres O(n³)):
+    // encuentra la asignación global de mínimo costo, evitando que
+    // el último mozo quede forzado a repetir plaza por decisiones greedy previas.
+    function hungarianAssign(c) {
+      const N=c.length;
+      const u=new Array(N+1).fill(0), v=new Array(N+1).fill(0);
+      const p=new Array(N+1).fill(0), way=new Array(N+1).fill(0);
+      for(let i=1;i<=N;i++){
+        p[0]=i; let j0=0;
+        const minD=new Array(N+1).fill(Infinity);
+        const used=new Array(N+1).fill(false);
+        do{
+          used[j0]=true;
+          let i0=p[j0], delta=Infinity, j1=-1;
+          for(let j=1;j<=N;j++){
+            if(!used[j]){
+              const cur=c[i0-1][j-1]-u[i0]-v[j];
+              if(cur<minD[j]){minD[j]=cur; way[j]=j0;}
+              if(minD[j]<delta){delta=minD[j]; j1=j;}
+            }
+          }
+          for(let j=0;j<=N;j++){
+            if(used[j]){u[p[j]]+=delta; v[j]-=delta;}
+            else minD[j]-=delta;
+          }
+          j0=j1;
+        }while(p[j0]!==0);
+        do{const j1=way[j0]; p[j0]=p[j1]; j0=j1;}while(j0);
       }
-    });
-    // Ordenar globalmente: 1) sector ideal, 2) evitar repetir, 3) menos veces en slot, 4) circular
-    pares.sort((a,b)=>a.dist-b.dist||a.penRepetir-b.penRepetir||a.veces-b.veces||a.circularPos-b.circularPos);
-    // Asignar greedy global: tomar la mejor pareja disponible, sin repetir mozo ni slot
-    const slotsUsados=new Set();
-    for(const par of pares){
-      if(mozosUsados.has(par.mozo.id)) continue;
-      if(slotsUsados.has(par.slot.slotId)) continue;
-      resultado.push({slotId:par.slot.slotId,mozoId:par.mozo.id,slot:par.slot});
-      mozosUsados.add(par.mozo.id);
-      slotsUsados.add(par.slot.slotId);
+      // p[j] = índice del mozo (1-based) asignado al slot j (1-based)
+      // Devuelve: assign[mozoIdx] = slotIdx
+      const assign=new Array(N);
+      for(let j=1;j<=N;j++) assign[p[j]-1]=j-1;
+      return assign;
     }
+
+    const asignacion=hungarianAssign(costMatrix);
+    const slotsUsados=new Set();
+    asignacion.forEach((slotIdx,mozoCircIdx)=>{
+      const mozo=mozosCirular[mozoCircIdx];
+      const slot=slotsLibres[slotIdx];
+      if(costMatrix[mozoCircIdx][slotIdx]>=INF){
+        advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo válido (revisar restricciones)`);
+        return;
+      }
+      resultado.push({slotId:slot.slotId,mozoId:mozo.id,slot});
+      mozosUsados.add(mozo.id);
+      slotsUsados.add(slot.slotId);
+    });
     // Advertir slots que quedaron sin mozo (por restricciones)
     slotsLibres.forEach(slot=>{
       if(!slotsUsados.has(slot.slotId))
