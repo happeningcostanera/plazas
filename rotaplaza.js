@@ -1113,6 +1113,26 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Calcular cuántas veces cada mozo estuvo en cada slot (últimos 30 días)
     const treintaDias=Date.now()-30*24*60*60*1000;
     const historialReciente=historial.filter(h=>h.ts>treintaDias);
+
+    // Si hoy es domingo, registrar qué slot tuvo cada mozo el domingo anterior
+    const slotDomingoPorMozo={};
+    if(new Date().getDay()===0&&turno==="manana"){
+      const hoy=new Date(); hoy.setHours(0,0,0,0);
+      const domAnterior=new Date(hoy); domAnterior.setDate(hoy.getDate()-7);
+      const tsDomInicio=domAnterior.getTime();
+      const tsDomFin=tsDomInicio+24*60*60*1000-1;
+      const histDom=historial.filter(h=>h.ts>=tsDomInicio&&h.ts<=tsDomFin&&h.tipo!=="notas");
+      mozosLibres.forEach(m=>{
+        const hDom=histDom.find(h=>h.mozoId===m.id);
+        if(!hDom) return;
+        const sl=slotsLibres.find(s=>
+          (hDom.slotId&&s.slotId===hDom.slotId)||
+          (!hDom.slotId&&s.ssNombre===hDom.subsector&&s.sectorNombre===hDom.sector)||
+          (!hDom.slotId&&!hDom.subsector&&s.sectorNombre===hDom.sector&&!s.ssNombre)
+        );
+        if(sl) slotDomingoPorMozo[m.id]=sl.slotId;
+      });
+    }
     const conteo={};
     mozosLibres.forEach(m=>{ conteo[m.id]={}; slotsLibres.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
     for(const h of historialReciente){
@@ -1197,7 +1217,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     }
 
     // Construir matriz de costos (mozos en orden circular × slots)
-    // Pesos: dist×10000 + penRepetir×1000 + veces×10 + circularPos
+    // Pesos: dist×10000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
     // Las restricciones se marcan con INF para excluirlas de la asignación óptima
     const INF = 1e9;
     const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
@@ -1206,8 +1226,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
         const dist=distanciaGrupo(mozo.id,slot.sectorId);
         const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
+        const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
         const veces=conteo[mozo.id]?.[slot.slotId]||0;
-        return dist*10000 + penRepetir*1000 + veces*10 + mi;
+        return dist*10000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
       })
     );
 
