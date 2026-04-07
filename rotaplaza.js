@@ -285,6 +285,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const tieneSubsActivos=subsActivos.length>0;
 
       if(!isDisp(s)) return; // skip inactive sectors entirely
+      if(!tieneSubsActivos) return; // skip sectors with no active subsectors
 
       // Sector label separator
       html+=`<div class="sector-label${firstSector?" first":""}">${s.nombre}</div>`;
@@ -1068,106 +1069,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Actualizar asignaciones locales para que el historial las incluya
     Object.assign(asignaciones,fijaAsignaciones);
 
-    // Asignar largos: uno por sector, distribuidos
-    const largos=mDisp.filter(m=>m.largo&&!mozosPreAsignados.has(m.id));
-    if(largos.length>0){
-      const sectoresUsadosLargo=new Set();
-      // Sectores ya ocupados por plaza fija de un largo
-      mDisp.filter(m=>m.largo&&mozosPreAsignados.has(m.id)).forEach(m=>{
-        const sl=slots.find(s=>s.slotId===m.plazaFija);
-        if(sl) sectoresUsadosLargo.add(sl.sectorId);
-      });
-      const batchLargo=writeBatch(db);
-      let largoCount=0;
-      const largoAsignaciones={};
-      for(const largo of largos){
-        // Buscar un slot libre en un sector que no tenga otro largo
-        const slotCandidato=slots.find(sl=>
-          !slotsPreAsignados.has(sl.slotId)&&
-          !sectoresUsadosLargo.has(sl.sectorId)&&
-          !(largo.restricciones||[]).includes(sl.slotId)
-        );
-        if(!slotCandidato) continue;
-        slotsPreAsignados.add(slotCandidato.slotId);
-        mozosPreAsignados.add(largo.id);
-        sectoresUsadosLargo.add(slotCandidato.sectorId);
-        largoAsignaciones[slotCandidato.slotId]={mozoId:largo.id,desde:Date.now()};
-        batchLargo.set(doc(asigCol,slotCandidato.slotId),largoAsignaciones[slotCandidato.slotId]);
-        largoCount++;
-      }
-      if(largoCount>0) await batchLargo.commit();
-      Object.assign(asignaciones,largoAsignaciones);
-    }
-
-    const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
-    const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
-
-    if(mozosLibres.length===0||slotsLibres.length===0||mozosLibres.length!==slotsLibres.length) return;
     const ahora=Date.now();
-    const n=mozosLibres.length;
 
-    // Leer índice circular desde Firestore
-    const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
-    const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
-
-    // Calcular cuántas veces cada mozo estuvo en cada slot (últimos 30 días)
-    const treintaDias=Date.now()-30*24*60*60*1000;
+    // ── Calcular historial y grupos (se usa en ambos Hungarian) ──────────────
+    const treintaDias=ahora-30*24*60*60*1000;
     const historialReciente=historial.filter(h=>h.ts>treintaDias);
 
-    // Si hoy es domingo, registrar qué slot tuvo cada mozo el domingo anterior
-    const slotDomingoPorMozo={};
-    if(new Date().getDay()===0&&turno==="manana"){
-      const hoy=new Date(); hoy.setHours(0,0,0,0);
-      const domAnterior=new Date(hoy); domAnterior.setDate(hoy.getDate()-7);
-      const tsDomInicio=domAnterior.getTime();
-      const tsDomFin=tsDomInicio+24*60*60*1000-1;
-      const histDom=historial.filter(h=>h.ts>=tsDomInicio&&h.ts<=tsDomFin&&h.tipo!=="notas");
-      mozosLibres.forEach(m=>{
-        const hDom=histDom.find(h=>h.mozoId===m.id);
-        if(!hDom) return;
-        const sl=slotsLibres.find(s=>
-          (hDom.slotId&&s.slotId===hDom.slotId)||
-          (!hDom.slotId&&s.ssNombre===hDom.subsector&&s.sectorNombre===hDom.sector)||
-          (!hDom.slotId&&!hDom.subsector&&s.sectorNombre===hDom.sector&&!s.ssNombre)
-        );
-        if(sl) slotDomingoPorMozo[m.id]=sl.slotId;
-      });
-    }
-    const conteo={};
-    mozosLibres.forEach(m=>{ conteo[m.id]={}; slotsLibres.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
-    for(const h of historialReciente){
-      const mozo=mozosLibres.find(m=>m.id===h.mozoId);
-      if(!mozo) continue;
-      const sl=slotsLibres.find(s=>
-        (h.slotId&&s.slotId===h.slotId)||
-        (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
-        (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
-      );
-      if(sl&&conteo[mozo.id]) conteo[mozo.id][sl.slotId]=(conteo[mozo.id][sl.slotId]||0)+1;
-    }
-
-    const resultado=[], advertencias=[];
-    const mozosUsados=new Set();
-
-    // Orden de sectores activos (el orden de la pestaña Sectores define la secuencia de rotación)
+    // Orden de sectores activos (define la secuencia de rotación)
     const sectoresActivos=sectores.filter(s=>isDisp(s));
-
-    // Grupos únicos en orden (sectores con mismo grupo cuentan como uno)
     const ordenGrupos=[];
-    sectoresActivos.forEach(s=>{
-      const g=s.grupo||s.id;
-      if(!ordenGrupos.includes(g)) ordenGrupos.push(g);
-    });
-
-    // IDs de sectores con regla "evitar repetir" → mapeados a grupo
+    sectoresActivos.forEach(s=>{ const g=s.grupo||s.id; if(!ordenGrupos.includes(g)) ordenGrupos.push(g); });
     const gruposEvitar=new Set();
-    sectoresActivos.filter(s=>s.evitarRepetirSector).forEach(s=>{
-      gruposEvitar.add(s.grupo||s.id);
-    });
+    sectoresActivos.filter(s=>s.evitarRepetirSector).forEach(s=>{ gruposEvitar.add(s.grupo||s.id); });
 
-    // Para cada mozo, averiguar en qué grupo estuvo en la última rotación (últimos 30 días)
+    // Para cada mozo disponible, su último grupo (últimos 30 días)
     const ultimoGrupoPorMozo={};
-    mozosLibres.forEach(m=>{
+    mDisp.forEach(m=>{
       for(const h of historialReciente){
         if(h.mozoId!==m.id) continue;
         const sl=slots.find(s=>
@@ -1179,24 +1096,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       }
     });
 
-    // Calcular el grupo ideal para cada mozo (el siguiente en el orden)
+    // Grupo ideal (siguiente en el orden circular)
     const grupoIdealPorMozo={};
-    mozosLibres.forEach(m=>{
+    mDisp.forEach(m=>{
       const ultimoGrupo=ultimoGrupoPorMozo[m.id];
-      if(!ultimoGrupo){
-        grupoIdealPorMozo[m.id]=null;
-        return;
-      }
+      if(!ultimoGrupo){ grupoIdealPorMozo[m.id]=null; return; }
       const idxActual=ordenGrupos.indexOf(ultimoGrupo);
-      if(idxActual===-1){
-        grupoIdealPorMozo[m.id]=null;
-        return;
-      }
-      const idxSiguiente=(idxActual+1)%ordenGrupos.length;
-      grupoIdealPorMozo[m.id]=ordenGrupos[idxSiguiente];
+      if(idxActual===-1){ grupoIdealPorMozo[m.id]=null; return; }
+      grupoIdealPorMozo[m.id]=ordenGrupos[(idxActual+1)%ordenGrupos.length];
     });
 
-    // Penalización: qué tan lejos está el grupo del slot del grupo ideal del mozo
     function distanciaGrupo(mozoId, sectorId) {
       const ideal=grupoIdealPorMozo[mozoId];
       if(!ideal) return 0;
@@ -1204,33 +1113,49 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const idxIdeal=ordenGrupos.indexOf(ideal);
       const idxSlot=ordenGrupos.indexOf(grupoSlot);
       if(idxIdeal===-1||idxSlot===-1) return 0;
-      const total=ordenGrupos.length;
-      return (idxSlot-idxIdeal+total)%total;
+      return (idxSlot-idxIdeal+ordenGrupos.length)%ordenGrupos.length;
     }
-
-    // Penalización por grupo "evitar repetir"
     function penEvitarRepetir(mozoId, sectorId) {
       const grupoSlot=grupoDeId(sectorId);
       if(!gruposEvitar.has(grupoSlot)) return 0;
-      const ultimo=ultimoGrupoPorMozo[mozoId];
-      return (ultimo===grupoSlot)?1:0;
+      return (ultimoGrupoPorMozo[mozoId]===grupoSlot)?1:0;
     }
 
-    // Construir matriz de costos (mozos en orden circular × slots)
-    // Pesos: dist×10000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
-    // Las restricciones se marcan con INF para excluirlas de la asignación óptima
+    // Penalización dominical (turno mañana)
+    const slotDomingoPorMozo={};
+    if(new Date().getDay()===0&&turno==="manana"){
+      const hoy=new Date(); hoy.setHours(0,0,0,0);
+      const domAnterior=new Date(hoy); domAnterior.setDate(hoy.getDate()-7);
+      const tsDomInicio=domAnterior.getTime();
+      const tsDomFin=tsDomInicio+24*60*60*1000-1;
+      const histDom=historial.filter(h=>h.ts>=tsDomInicio&&h.ts<=tsDomFin&&h.tipo!=="notas");
+      mDisp.forEach(m=>{
+        const hDom=histDom.find(h=>h.mozoId===m.id);
+        if(!hDom) return;
+        const sl=slots.find(s=>
+          (hDom.slotId&&s.slotId===hDom.slotId)||
+          (!hDom.slotId&&s.ssNombre===hDom.subsector&&s.sectorNombre===hDom.sector)||
+          (!hDom.slotId&&!hDom.subsector&&s.sectorNombre===hDom.sector&&!s.ssNombre)
+        );
+        if(sl) slotDomingoPorMozo[m.id]=sl.slotId;
+      });
+    }
+
+    // Conteo de veces por mozo×slot (últimos 30 días, todos los mozos disponibles)
+    const conteo={};
+    mDisp.forEach(m=>{ conteo[m.id]={}; slots.forEach(sl=>{ conteo[m.id][sl.slotId]=0; }); });
+    for(const h of historialReciente){
+      const mozo=mDisp.find(m=>m.id===h.mozoId);
+      if(!mozo) continue;
+      const sl=slots.find(s=>
+        (h.slotId&&s.slotId===h.slotId)||
+        (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
+        (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
+      );
+      if(sl&&conteo[mozo.id]) conteo[mozo.id][sl.slotId]=(conteo[mozo.id][sl.slotId]||0)+1;
+    }
+
     const INF = 1e9;
-    const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
-    const costMatrix = mozosCirular.map((mozo,mi) =>
-      slotsLibres.map(slot => {
-        if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
-        const dist=distanciaGrupo(mozo.id,slot.sectorId);
-        const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
-        const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
-        const veces=conteo[mozo.id]?.[slot.slotId]||0;
-        return dist*10000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
-      })
-    );
 
     // Algoritmo de Hungarian (Kuhn-Munkres O(n³)):
     // encuentra la asignación global de mínimo costo, evitando que
@@ -1261,12 +1186,94 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         }while(p[j0]!==0);
         do{const j1=way[j0]; p[j0]=p[j1]; j0=j1;}while(j0);
       }
-      // p[j] = índice del mozo (1-based) asignado al slot j (1-based)
-      // Devuelve: assign[mozoIdx] = slotIdx
       const assign=new Array(N);
       for(let j=1;j<=N;j++) assign[p[j]-1]=j-1;
       return assign;
     }
+
+    // ── HUNGARIAN 1: LARGOS ──────────────────────────────────────────────────
+    // Columnas = sectores (uno por sector, fuerza la restricción naturalmente)
+    // Filas dummy si hay más sectores que largos (matrix cuadrada requerida)
+    const largosDisp=mDisp.filter(m=>m.largo&&!mozosPreAsignados.has(m.id));
+    if(largosDisp.length>0){
+      // Sectores ya ocupados por plaza fija de un largo pre-asignado
+      const sectoresUsadosLargo=new Set();
+      mDisp.filter(m=>m.largo&&mozosPreAsignados.has(m.id)).forEach(m=>{
+        const sl=slots.find(s=>s.slotId===m.plazaFija);
+        if(sl) sectoresUsadosLargo.add(sl.sectorId);
+      });
+
+      // Un candidato por sector: todos los slots libres agrupados por sectorId
+      const slotsPorSector=new Map();
+      slots.filter(sl=>!slotsPreAsignados.has(sl.slotId)&&!sectoresUsadosLargo.has(sl.sectorId))
+        .forEach(sl=>{ if(!slotsPorSector.has(sl.sectorId)) slotsPorSector.set(sl.sectorId,[]); slotsPorSector.get(sl.sectorId).push(sl); });
+      const sectoresCandidatos=[...slotsPorSector.entries()].map(([sectorId,slotsDelSector])=>({sectorId,slotsDelSector}));
+
+      const NL=largosDisp.length, NS=sectoresCandidatos.length;
+      const dim=Math.max(NL,NS);
+      const costLargos=Array.from({length:dim},(_,li)=>
+        Array.from({length:dim},(_,si)=>{
+          if(li>=NL||si>=NS) return 0; // dummy
+          const largo=largosDisp[li];
+          const {sectorId,slotsDelSector}=sectoresCandidatos[si];
+          const slotsValidos=slotsDelSector.filter(sl=>!(largo.restricciones||[]).includes(sl.slotId));
+          if(slotsValidos.length===0) return INF;
+          const vecesSector=slotsDelSector.reduce((sum,sl)=>sum+(conteo[largo.id]?.[sl.slotId]||0),0);
+          const dist=distanciaGrupo(largo.id,sectorId);
+          const penRep=penEvitarRepetir(largo.id,sectorId);
+          const penDom=slotsDelSector.some(sl=>slotDomingoPorMozo[largo.id]===sl.slotId)?1:0;
+          return dist*10000+penRep*1000+penDom*500+vecesSector*10+li;
+        })
+      );
+
+      const asignacionLargos=hungarianAssign(costLargos);
+      const batchLargo=writeBatch(db);
+      const largoAsignaciones={};
+      asignacionLargos.slice(0,NL).forEach((sectorIdx,largoIdx)=>{
+        if(sectorIdx>=NS) return; // fila dummy asignada a columna dummy
+        const largo=largosDisp[largoIdx];
+        const {slotsDelSector}=sectoresCandidatos[sectorIdx];
+        if(costLargos[largoIdx][sectorIdx]>=INF) return;
+        const slotsValidos2=slotsDelSector.filter(sl=>!(largo.restricciones||[]).includes(sl.slotId));
+        const slotCandidato=slotsValidos2.reduce((best,sl)=>(conteo[largo.id]?.[sl.slotId]||0)<(conteo[largo.id]?.[best.slotId]||0)?sl:best);
+        if(!slotCandidato) return;
+        slotsPreAsignados.add(slotCandidato.slotId);
+        mozosPreAsignados.add(largo.id);
+        largoAsignaciones[slotCandidato.slotId]={mozoId:largo.id,desde:ahora};
+        batchLargo.set(doc(asigCol,slotCandidato.slotId),largoAsignaciones[slotCandidato.slotId]);
+      });
+      if(Object.keys(largoAsignaciones).length>0) await batchLargo.commit();
+      Object.assign(asignaciones,largoAsignaciones);
+    }
+
+    // ── HUNGARIAN 2: RESTO ───────────────────────────────────────────────────
+    const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
+    const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
+
+    if(mozosLibres.length===0||slotsLibres.length===0||mozosLibres.length!==slotsLibres.length) return;
+    const n=mozosLibres.length;
+
+    // Leer índice circular desde Firestore
+    const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
+    const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
+
+    const resultado=[], advertencias=[];
+    const mozosUsados=new Set();
+
+    // Construir matriz de costos (mozos en orden circular × slots)
+    // Pesos: dist×10000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
+    // Las restricciones se marcan con INF para excluirlas de la asignación óptima
+    const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
+    const costMatrix = mozosCirular.map((mozo,mi) =>
+      slotsLibres.map(slot => {
+        if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
+        const dist=distanciaGrupo(mozo.id,slot.sectorId);
+        const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
+        const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
+        const veces=conteo[mozo.id]?.[slot.slotId]||0;
+        return dist*10000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
+      })
+    );
 
     const asignacion=hungarianAssign(costMatrix);
     const slotsUsados=new Set();
