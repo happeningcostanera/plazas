@@ -1082,8 +1082,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const gruposEvitar=new Set();
     sectoresActivos.filter(s=>s.evitarRepetirSector).forEach(s=>{ gruposEvitar.add(s.grupo||s.id); });
 
-    // Para cada mozo disponible, su último grupo (últimos 30 días)
+    // Para cada mozo disponible, su último grupo y último slot exacto (últimos 30 días)
     const ultimoGrupoPorMozo={};
+    const ultimoSlotPorMozo={};
     mDisp.forEach(m=>{
       for(const h of historialReciente){
         if(h.mozoId!==m.id) continue;
@@ -1092,7 +1093,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
           (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
         );
-        if(sl){ ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId); break; }
+        if(sl){
+          ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId);
+          ultimoSlotPorMozo[m.id]=sl.slotId;
+          break;
+        }
       }
     });
 
@@ -1222,7 +1227,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           const dist=distanciaGrupo(largo.id,sectorId);
           const penRep=penEvitarRepetir(largo.id,sectorId);
           const penDom=slotsDelSector.some(sl=>slotDomingoPorMozo[largo.id]===sl.slotId)?1:0;
-          return dist*10000+penRep*1000+penDom*500+vecesSector*10+li;
+          const penUltimoSlot=slotsDelSector.some(sl=>ultimoSlotPorMozo[largo.id]===sl.slotId)?1:0;
+          return dist*10000+penUltimoSlot*2000+penRep*1000+penDom*500+vecesSector*10+li;
         })
       );
 
@@ -1235,7 +1241,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const {slotsDelSector}=sectoresCandidatos[sectorIdx];
         if(costLargos[largoIdx][sectorIdx]>=INF) return;
         const slotsValidos2=slotsDelSector.filter(sl=>!(largo.restricciones||[]).includes(sl.slotId));
-        const slotCandidato=slotsValidos2.reduce((best,sl)=>(conteo[largo.id]?.[sl.slotId]||0)<(conteo[largo.id]?.[best.slotId]||0)?sl:best);
+        const slotsPreferidos=slotsValidos2.filter(sl=>sl.slotId!==ultimoSlotPorMozo[largo.id]);
+        const pool=slotsPreferidos.length>0?slotsPreferidos:slotsValidos2;
+        const slotCandidato=pool.reduce((best,sl)=>(conteo[largo.id]?.[sl.slotId]||0)<(conteo[largo.id]?.[best.slotId]||0)?sl:best);
         if(!slotCandidato) return;
         slotsPreAsignados.add(slotCandidato.slotId);
         mozosPreAsignados.add(largo.id);
@@ -1261,17 +1269,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozosUsados=new Set();
 
     // Construir matriz de costos (mozos en orden circular × slots)
-    // Pesos: dist×10000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
+    // Pesos: dist×10000 + penUltimoSlot×2000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
     // Las restricciones se marcan con INF para excluirlas de la asignación óptima
     const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
     const costMatrix = mozosCirular.map((mozo,mi) =>
       slotsLibres.map(slot => {
         if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
         const dist=distanciaGrupo(mozo.id,slot.sectorId);
+        const penUltimoSlot=(ultimoSlotPorMozo[mozo.id]===slot.slotId)?1:0;
         const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
         const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
         const veces=conteo[mozo.id]?.[slot.slotId]||0;
-        return dist*10000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
+        return dist*10000 + penUltimoSlot*2000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
       })
     );
 
