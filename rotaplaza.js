@@ -397,7 +397,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
           html+=`<span class="ss-nombre">${ss["nombre_"+turno]||ss.nombre}</span>`;
           if(mozo){
-            html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
+            html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}</span>`;
             if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
             else if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -418,7 +418,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
         html+=`<span class="ss-nombre">${s.nombre}</span>`;
         if(mozo){
-          html+=`<span class="ss-mozo">${mozo.nombre}</span>`;
+          html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}</span>`;
           if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
           else if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -988,7 +988,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const ssNombre=h.subsector||sector;
         html+=`<div class="rotacion-chip">`;
         html+=`<span class="rotacion-chip-ss">${ssNombre}</span>`;
-        html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}</span>`;
+        const esLargo=mozos.find(m=>m.id===h.mozoId)?.largo;
+        html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}${esLargo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}</span>`;
         if(h.comentario) html+=`<span style="font-size:9px;color:#f0c060;font-style:italic">💬 ${h.comentario}</span>`;
         html+=`</div>`;
       });
