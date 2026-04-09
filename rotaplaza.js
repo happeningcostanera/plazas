@@ -24,6 +24,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
   let editableHastaLocal=null, feedbackGuardado="";
+  let feedbackPorRotacion={};
   let notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
   let notasActivas=true;
 
@@ -41,6 +42,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   // Colecciones por turno (asignaciones e historial)
   const asigCol     = collection(db, turnoValido ? "asignaciones_" + turno : "asignaciones");
   const histCol     = collection(db, turnoValido ? "historial_" + turno : "historial");
+  const feedbackCol = collection(db, turnoValido ? "feedback_" + turno : "feedback");
 
   let renderAllScheduled=false;
   function scheduleRenderAll() {
@@ -60,6 +62,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   onSnapshot(query(sectoresCol,orderBy("orden","asc")), snap => { sectores=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(asigCol, snap => { asignaciones={}; snap.docs.forEach(d=>{asignaciones[d.id]=d.data();}); scheduleRenderAll(); });
   onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); });
+  onSnapshot(feedbackCol, snap => { feedbackPorRotacion={}; snap.docs.forEach(d=>{ feedbackPorRotacion[d.id]=d.data().feedback||""; }); renderRotaciones(); });
   const metaSuffix = turnoValido ? "_" + turno : "";
   let ultimaRotacionNotas={};
   onSnapshot(doc(db,"meta","ultimaRotacion"+metaSuffix), snap => {
@@ -262,6 +265,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(abriendo && input) { input.value=feedbackGuardado; input.focus(); }
   };
 
+  window.verFeedbackRotacion = function(rotId) {
+    const texto=feedbackPorRotacion[rotId];
+    if(!texto) return;
+    let tip=document.getElementById("feedback-tip");
+    if(!tip){
+      tip=document.createElement("div");
+      tip.id="feedback-tip";
+      tip.style.cssText="position:fixed;z-index:9999;background:#1a1a2a;border:1px solid var(--gold);color:var(--text);font-size:12px;padding:10px 14px;border-radius:8px;max-width:260px;box-shadow:0 4px 20px rgba(0,0,0,.6);white-space:pre-wrap;line-height:1.5;cursor:pointer";
+      tip.title="Click para cerrar";
+      tip.onclick=()=>tip.remove();
+      document.body.appendChild(tip);
+    }
+    tip.textContent=texto;
+    const x=Math.min(window.innerWidth/2-130, window.innerWidth-280);
+    tip.style.left=Math.max(10,x)+"px";
+    tip.style.top="80px";
+  };
   window.guardarFeedback = async function() {
     const input=document.getElementById("feedback-input");
     if(!input||!ultimaRotacionId) return;
@@ -948,6 +968,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     html+=`<span class="rotacion-fecha">${rotPaginaActual===0?"Última rotación — ":""}${fecha}</span>`;
     html+=`<span class="rotacion-hora">${hora} hs</span>`;
     if(rotId) html+=`<span style="font-size:8px;color:var(--text3);opacity:.5;cursor:pointer" title="ID: ${rotId}" onclick="navigator.clipboard.writeText('${rotId}')">#${rotId.slice(-6)}</span>`;
+    if(rotId && feedbackPorRotacion[rotId]) html+=`<span style="font-size:11px;opacity:.6;cursor:pointer;margin-left:4px" title="Ver comentario" onclick="verFeedbackRotacion('${rotId}')">💬</span>`;
     html+=`</div>`;
     html+=`<div class="rotacion-grid">`;
 
