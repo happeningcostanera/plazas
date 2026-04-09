@@ -23,6 +23,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   let popupSlotId=null, restMozoId=null, fijaMozoId=null, editCtx=null;
   let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
   let pendingHistorial=null, mozoRotIdx=0, formacionBloqueada=false;
+  let editableHastaLocal=null, feedbackGuardado="";
   let notas={pesca:"",dolar:"",sugerencia:"",faltantes:""};
   let notasActivas=true;
 
@@ -73,7 +74,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const af=document.getElementById("acciones-formacion"); if(af) af.style.display="flex";
         scheduleRenderAll();
       }
-    }else{ultimaRotacionTs=null;ultimaRotacionNotas={};}
+      editableHastaLocal=d.editableHasta||null;
+      feedbackGuardado=d.feedback||"";
+      renderFeedbackStrip();
+    }else{ultimaRotacionTs=null;ultimaRotacionNotas={};editableHastaLocal=null;feedbackGuardado="";renderFeedbackStrip();}
     renderUltimaRotacion();
   });
   onSnapshot(doc(db,"meta","rotacion"+metaSuffix), snap => { if(snap.exists()) mozoRotIdx=snap.data().idx||0; });
@@ -202,6 +206,76 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     });
     return slots;
   }
+
+  const FEEDBACK_TOOLTIP_KEY="feedbackTooltipVisto_"+(turno||"");
+  const FEEDBACK_TOOLTIP_MAX=3;
+
+  function renderFeedbackStrip() {
+    const strip=document.getElementById("feedback-strip");
+    if(!strip) return;
+    const visible=formacionBloqueada && editableHastaLocal && Date.now()<editableHastaLocal;
+    strip.style.display=visible?"block":"none";
+    if(!visible) return;
+    const label=document.getElementById("feedback-label");
+    const hint=document.getElementById("feedback-toggle-hint");
+    const input=document.getElementById("feedback-input");
+    if(feedbackGuardado){
+      if(label) label.textContent="✓ Comentario guardado";
+      if(hint) hint.textContent="Editar";
+    } else {
+      if(label) label.textContent="¿Algo para mejorar en esta rotación?";
+      if(hint) hint.textContent="Comentar";
+    }
+    if(input && document.getElementById("feedback-expanded").style.display==="none"){
+      input.value=feedbackGuardado;
+    }
+    // Tooltip "nueva función" — hasta 3 veces
+    const visto=parseInt(localStorage.getItem(FEEDBACK_TOOLTIP_KEY)||"0");
+    const tooltip=document.getElementById("feedback-tooltip");
+    if(tooltip) tooltip.remove();
+    if(visto<FEEDBACK_TOOLTIP_MAX){
+      const t=document.createElement("div");
+      t.id="feedback-tooltip";
+      t.style.cssText="margin-top:6px;padding:12px 14px;background:rgba(232,184,102,.1);border:1px solid rgba(232,184,102,.35);border-radius:10px;position:relative";
+      t.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--gold2);margin-bottom:4px">✨ Nueva función</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5">Si el algoritmo sugirió algo que tuviste que corregir, dejá un comentario. Nos ayuda a mejorar la rotación automática.</div>
+        <div style="text-align:right;margin-top:8px">
+          <button onclick="cerrarFeedbackTooltip()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--gold);background:rgba(201,147,58,.15);color:var(--gold2);font-family:'DM Sans',sans-serif;cursor:pointer">Entendido</button>
+        </div>`;
+      strip.after(t);
+    }
+  }
+
+  window.cerrarFeedbackTooltip = function() {
+    const visto=parseInt(localStorage.getItem(FEEDBACK_TOOLTIP_KEY)||"0");
+    localStorage.setItem(FEEDBACK_TOOLTIP_KEY, visto+1);
+    const t=document.getElementById("feedback-tooltip");
+    if(t) t.remove();
+  };
+
+  window.toggleFeedbackStrip = function() {
+    const exp=document.getElementById("feedback-expanded");
+    const input=document.getElementById("feedback-input");
+    if(!exp) return;
+    const abriendo=exp.style.display==="none";
+    exp.style.display=abriendo?"block":"none";
+    if(abriendo && input) { input.value=feedbackGuardado; input.focus(); }
+  };
+
+  window.guardarFeedback = async function() {
+    const input=document.getElementById("feedback-input");
+    if(!input||!ultimaRotacionId) return;
+    const texto=input.value.trim();
+    const feedbackCol=collection(db, turnoValido ? "feedback_"+turno : "feedback");
+    const batch=writeBatch(db);
+    batch.set(doc(feedbackCol,ultimaRotacionId),{rotacionId:ultimaRotacionId,feedback:texto,ts:Date.now()});
+    // también en ultimaRotacion para restaurar si recargan la página durante el turno
+    batch.set(doc(db,"meta","ultimaRotacion"+metaSuffix),{feedback:texto},{merge:true});
+    await batch.commit();
+    feedbackGuardado=texto;
+    document.getElementById("feedback-expanded").style.display="none";
+    renderFeedbackStrip();
+  };
 
   function renderUltimaRotacion() {
     const el=document.getElementById("ultima-rotacion");
@@ -1405,9 +1479,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     await batch.commit();
 
     ultimaRotacionId=rotacionId;
+    editableHastaLocal=editableHasta;
+    feedbackGuardado="";
     pendingHistorial=[];
     formacionBloqueada=true;
     document.getElementById("acciones-formacion").style.display="flex";
+    renderFeedbackStrip();
     ocultarBannerPendiente();
     renderAll();
   };
@@ -1498,8 +1575,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const nf=document.getElementById("nota-faltantes"); if(nf) nf.value="";
     pendingHistorial=[];
     ultimaRotacionId=null;
+    editableHastaLocal=null;
+    feedbackGuardado="";
     formacionBloqueada=false;
     document.getElementById("acciones-formacion").style.display="none";
+    renderFeedbackStrip();
     ocultarBannerPendiente();
   };
 
