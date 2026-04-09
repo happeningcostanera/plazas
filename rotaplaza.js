@@ -237,8 +237,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const t=document.createElement("div");
       t.id="feedback-tooltip";
       t.style.cssText="margin-top:6px;padding:12px 14px;background:rgba(232,184,102,.1);border:1px solid rgba(232,184,102,.35);border-radius:10px;position:relative";
-      t.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--gold2);margin-bottom:4px">✨ Nueva función</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.5">Si el algoritmo sugirió algo que tuviste que corregir, dejá un comentario. Nos ayuda a mejorar la rotación automática.</div>
+      t.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--gold2);margin-bottom:4px">✨ SistemAlf Nueva función</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5">Si en la rotación hizo algo que tuviste que corregir, explicá lo mas preciso posible para mejorar la rotación automática.</div>
         <div style="text-align:right;margin-top:8px">
           <button onclick="cerrarFeedbackTooltip()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--gold);background:rgba(201,147,58,.15);color:var(--gold2);font-family:'DM Sans',sans-serif;cursor:pointer">Entendido</button>
         </div>`;
