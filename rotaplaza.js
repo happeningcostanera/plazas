@@ -19,6 +19,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   const TURNO_COLORES = { manana: { accent: "#e8b866", bg: "rgba(201,147,58,.15)" }, noche: { accent: "#90cfe0", bg: "rgba(60,120,180,.15)" } };
   const turno = new URLSearchParams(location.search).get("turno");
   const turnoValido = TURNOS_VALIDOS.includes(turno);
+  const dangerMode = new URLSearchParams(location.search).get("danger") === "1";
 
   let popupSlotId=null, restMozoId=null, fijaMozoId=null, editCtx=null;
   let mozos=[], mozosBar=[], peones=[], sectores=[], sectoresBar=[], sectoresPeon=[], asignaciones={}, historial=[], ultimaRotacionTs=null;
@@ -241,7 +242,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       t.id="feedback-tooltip";
       t.style.cssText="margin-top:6px;padding:12px 14px;background:rgba(232,184,102,.1);border:1px solid rgba(232,184,102,.35);border-radius:10px;position:relative";
       t.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--gold2);margin-bottom:4px">✨ SistemAlf Nueva función</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.5">Si la plaza se generó de una manera que corregir, explicá lo mas preciso posible para mejorar la rotación automática.</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5">Si la plaza se generó de una manera que tuviste que corregir, explicá lo mas preciso posible para mejorar la rotación automática.</div>
         <div style="text-align:right;margin-top:8px">
           <button onclick="cerrarFeedbackTooltip()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--gold);background:rgba(201,147,58,.15);color:var(--gold2);font-family:'DM Sans',sans-serif;cursor:pointer">Entendido</button>
         </div>`;
@@ -693,7 +694,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           ${ss.descripcion?`<span style="font-size:10px;color:var(--text3);flex:1;font-style:italic">${ss.descripcion}</span>`:""}
           <button class="btn btn-ghost" onclick="abrirEdicion('subsector','${s.id}',${i})">✏️</button>
           <button class="btn ${isDisp(ss)?"btn-gold":"btn-green"}" onclick="toggleSubsector('${s.id}',${i},${!isDisp(ss)})">${isDisp(ss)?"Desact.":"Activ."}</button>
-          <button class="btn btn-red" onclick="eliminarSubsector('${s.id}',${i})">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarSubsector('${s.id}',${i})">✕</button>`:""}
         </div>`).join("");
       return `<div class="sector-cfg-row" data-id="${s.id}"
         draggable="true"
@@ -709,7 +710,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <button class="btn btn-ghost" onclick="abrirEdicion('sector','${s.id}')">✏️</button>
           <button class="btn ${s.evitarRepetirSector?"btn-orange":"btn-ghost"}" onclick="toggleEvitarRepetir('${s.id}',${!s.evitarRepetirSector})" title="Evitar repetir sector completo en ciclo siguiente">${s.evitarRepetirSector?"🔒 No repetir sector":"🔓 Permitir repetir"}</button>
           <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSector('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
-          <button class="btn btn-red" onclick="eliminarSector('${s.id}')">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarSector('${s.id}')">✕</button>`:""}
         </div>
         <div style="padding:4px 12px 6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--text3)">Grupo:</span>
@@ -1184,11 +1185,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     mDisp.forEach(m=>{
       for(const h of historialReciente){
         if(h.mozoId!==m.id) continue;
-        const sl=slots.find(s=>
-          (h.slotId&&s.slotId===h.slotId)||
-          (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
-          (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
-        );
+        const sl=
+          (h.slotId&&slots.find(s=>s.slotId===h.slotId))||
+          (h.subsector?slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector):null)||
+          (!h.subsector?slots.find(s=>s.sectorNombre===h.sector&&!s.ssNombre):null);
         if(sl){
           ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId);
           ultimoSlotPorMozo[m.id]=sl.slotId;
@@ -1233,11 +1233,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       mDisp.forEach(m=>{
         const hDom=histDom.find(h=>h.mozoId===m.id);
         if(!hDom) return;
-        const sl=slots.find(s=>
-          (hDom.slotId&&s.slotId===hDom.slotId)||
-          (!hDom.slotId&&s.ssNombre===hDom.subsector&&s.sectorNombre===hDom.sector)||
-          (!hDom.slotId&&!hDom.subsector&&s.sectorNombre===hDom.sector&&!s.ssNombre)
-        );
+        const sl=
+          (hDom.slotId&&slots.find(s=>s.slotId===hDom.slotId))||
+          (hDom.subsector?slots.find(s=>s.ssNombre===hDom.subsector&&s.sectorNombre===hDom.sector):null)||
+          (!hDom.subsector?slots.find(s=>s.sectorNombre===hDom.sector&&!s.ssNombre):null);
         if(sl) slotDomingoPorMozo[m.id]=sl.slotId;
       });
     }
@@ -1248,11 +1247,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     for(const h of historialReciente){
       const mozo=mDisp.find(m=>m.id===h.mozoId);
       if(!mozo) continue;
-      const sl=slots.find(s=>
-        (h.slotId&&s.slotId===h.slotId)||
-        (!h.slotId&&s.ssNombre===h.subsector&&s.sectorNombre===h.sector)||
-        (!h.slotId&&!h.subsector&&s.sectorNombre===h.sector&&!s.ssNombre)
-      );
+      const sl=
+        (h.slotId&&slots.find(s=>s.slotId===h.slotId))||
+        (h.subsector?slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector):null)||
+        (!h.subsector?slots.find(s=>s.sectorNombre===h.sector&&!s.ssNombre):null);
       if(sl&&conteo[mozo.id]) conteo[mozo.id][sl.slotId]=(conteo[mozo.id][sl.slotId]||0)+1;
     }
 
@@ -1804,6 +1802,49 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   window.toggleEvitarRepetir = async function(sectorId, val) {
     await setDoc(doc(sectoresCol, sectorId), { evitarRepetirSector: val }, { merge: true });
+  };
+
+  // Diagnóstico de rotación — llamar desde consola: diagnosticarRotacion()
+  // No modifica nada, solo muestra cómo vería el algoritmo a cada mozo
+  window.diagnosticarRotacion = function() {
+    const mDisp=mozos.filter(m=>isDisp(m));
+    const slots=getSlots();
+    const ahora=Date.now();
+    const treintaDias=ahora-30*24*60*60*1000;
+    const historialReciente=historial.filter(h=>h.ts>treintaDias);
+    const sectoresActivos=sectores.filter(s=>isDisp(s));
+    const ordenGrupos=[];
+    sectoresActivos.forEach(s=>{ const g=s.grupo||s.id; if(!ordenGrupos.includes(g)) ordenGrupos.push(g); });
+    const gruposEvitar=new Set();
+    sectoresActivos.filter(s=>s.evitarRepetirSector).forEach(s=>{ gruposEvitar.add(s.grupo||s.id); });
+    const ultimoGrupoPorMozo={}, ultimoSlotPorMozo={};
+    mDisp.forEach(m=>{
+      for(const h of historialReciente){
+        if(h.mozoId!==m.id) continue;
+        const sl=
+          (h.slotId&&slots.find(s=>s.slotId===h.slotId))||
+          (h.subsector?slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector):null)||
+          (!h.subsector?slots.find(s=>s.sectorNombre===h.sector&&!s.ssNombre):null);
+        if(sl){ ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId); ultimoSlotPorMozo[m.id]=sl.slotId; break; }
+      }
+    });
+    const grupoIdealPorMozo={};
+    mDisp.forEach(m=>{
+      const ug=ultimoGrupoPorMozo[m.id]; if(!ug){ grupoIdealPorMozo[m.id]=null; return; }
+      const idx=ordenGrupos.indexOf(ug); if(idx===-1){ grupoIdealPorMozo[m.id]=null; return; }
+      grupoIdealPorMozo[m.id]=ordenGrupos[(idx+1)%ordenGrupos.length];
+    });
+    console.log("=== DIAGNÓSTICO DE ROTACIÓN ===");
+    console.log("ordenGrupos:", ordenGrupos);
+    console.log("gruposEvitar (no repetir):", [...gruposEvitar]);
+    console.table(mDisp.map(m=>({
+      nombre: m.nombre,
+      largo: m.largo?"sí":"no",
+      ultimoGrupo: ultimoGrupoPorMozo[m.id]||"❌ sin historial",
+      ultimoSlot: ultimoSlotPorMozo[m.id]||"—",
+      grupoIdeal: grupoIdealPorMozo[m.id]||"❌ null (sin penalización dist)"
+    })));
+    console.log("Slots activos:", slots.map(s=>s.sectorNombre+(s.ssNombre?" › "+s.ssNombre:"")+" ["+s.slotId+"]"));
   };
 
   window.setGrupo = async function(sectorId, grupo) {
