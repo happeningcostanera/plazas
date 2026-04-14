@@ -365,7 +365,8 @@
 
       <div class="divider"></div>
       <h3>Editar y eliminar</h3>
-      <p>Mantener presionado para editar nombre. Tocar 🗑️ para eliminar.</p>
+      <p>Tocar ✏️ para editar nombre. Los botones de eliminar sector y plaza están <strong>ocultos por defecto</strong> para evitar borrados accidentales que afectan el historial de rotaciones.</p>
+      <div class="warn">Para habilitar el borrado, agregar <strong>?danger=1</strong> al final de la URL (ej: <code>...index.html?turno=manana&danger=1</code>). Usar solo cuando sea estrictamente necesario.</div>
     </div>
   </div>
 
@@ -377,6 +378,7 @@
     </button>
     <div class="section-body">
       <h3>Generar una plaza</h3>
+      <div class="warn">El botón <strong>⚡ Generar Plaza</strong> solo está disponible dentro del horario del turno: <strong>mañana de 08:00 a 17:00</strong>, <strong>noche de 17:00 a 02:00</strong>. Fuera de ese rango el botón se oculta para evitar generar la plaza en el turno equivocado.</div>
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-text">Ir a la pestaña <strong>Nueva Plaza</strong>.</div>
