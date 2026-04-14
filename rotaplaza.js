@@ -1091,11 +1091,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   };
 
   // ===================== ROTACION =====================
+  function fueraDeHorario() {
+    const h=new Date().getHours();
+    if(turno==="manana") return h<8||h>=17;   // disponible 08:00–17:00
+    if(turno==="noche")  return h>=2&&h<17;   // disponible 17:00–02:00
+    return false;
+  }
+
   function renderAvisoRotacion() {
     const aviso=document.getElementById("rotar-aviso");
     const btn=document.getElementById("btn-rotar");
     const hint=document.getElementById("rotar-hint");
     if(!aviso||!btn) return;
+
+    if(fueraDeHorario()){
+      const label=turno==="manana"?"08:00 y las 17:00":"las 17:00 y las 02:00";
+      aviso.style.display="block";hint.style.display="none";
+      aviso.innerHTML=`<div class="aviso warn"><strong>⏰ Fuera de horario</strong>El turno ${turno==="manana"?"mañana":"noche"} solo puede generarse entre ${label}.</div>`;
+      btn.style.display="none";return;
+    }
+    btn.style.display="";
+
     const mDisp=mozos.filter(m=>isDisp(m));
     const slots=getSlots();
     const totalMozos=mDisp.length, totalSlots=slots.length;
