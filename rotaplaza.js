@@ -520,14 +520,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <span class="ss-cfg-name ${isDisp(ss)?"":"off"}">${ss.nombre}</span>
           <button class="btn btn-ghost" onclick="editarNombreSubsectorBar('${s.id}',${i})">✏️</button>
           <button class="btn ${isDisp(ss)?"btn-gold":"btn-green"}" onclick="toggleSubsectorBar('${s.id}',${i},${!isDisp(ss)})">${isDisp(ss)?"Desact.":"Activ."}</button>
-          <button class="btn btn-red" onclick="eliminarSubsectorBar('${s.id}',${i})">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarSubsectorBar('${s.id}',${i})">✕</button>`:""}
         </div>`).join("");
       return `<div class="sector-cfg-block">
         <div class="sector-cfg-header" style="flex-wrap:wrap">
           <span class="sector-cfg-name ${isDisp(s)?"":"off"}">${s.nombre}</span>
           <button class="btn btn-ghost" onclick="editarNombreSectorBar('${s.id}')">✏️</button>
           <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSectorBar('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
-          <button class="btn btn-red" onclick="eliminarSectorBar('${s.id}')">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarSectorBar('${s.id}')">✕</button>`:""}
         </div>
         ${subsHtml}
         ${canAdd?`<div class="input-row" style="margin-top:8px">
@@ -609,7 +609,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <span class="sector-cfg-name ${isDisp(s)?"":"off"}">${s.nombre}</span>
           <button class="btn btn-ghost" onclick="editarNombreSectorPeon('${s.id}')">✏️</button>
           <button class="btn ${isDisp(s)?"btn-gold":"btn-green"}" onclick="toggleSectorPeon('${s.id}',${!isDisp(s)})">${isDisp(s)?"Desact.":"Activ."}</button>
-          <button class="btn btn-red" onclick="eliminarSectorPeon('${s.id}')">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarSectorPeon('${s.id}')">✕</button>`:""}
         </div>
       </div>`;
     }).join("");
@@ -644,7 +644,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <button class="btn btn-orange" onclick="abrirRestricciones('${m.id}')">🚫</button>
           <button class="btn btn-ghost"  onclick="abrirEdicion('mozo','${m.id}')">✏️</button>
           <button class="btn ${isDisp(m)?"btn-gold":"btn-green"}" onclick="toggleMozo('${m.id}',${!isDisp(m)})">${isDisp(m)?"Desactivar":"Activar"}</button>
-          <button class="btn btn-red" onclick="eliminarMozo('${m.id}')">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarMozo('${m.id}')">✕</button>`:""}
         </div>
       </div>`;
     }).join("");
@@ -661,7 +661,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         <div class="person-actions">
           <button class="btn btn-ghost" onclick="abrirEdicionBar('${m.id}')">✏️</button>
           <button class="btn ${isDisp(m)?"btn-gold":"btn-green"}" onclick="toggleMozoBar('${m.id}',${!isDisp(m)})">${isDisp(m)?"Desactivar":"Activar"}</button>
-          <button class="btn btn-red" onclick="eliminarMozoBar('${m.id}')">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarMozoBar('${m.id}')">✕</button>`:""}
         </div>
       </div>`).join("");
 
@@ -677,7 +677,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         <div class="person-actions">
           <button class="btn btn-ghost" onclick="abrirEdicionPeon('${p.id}')">✏️</button>
           <button class="btn ${isDisp(p)?"btn-gold":"btn-green"}" onclick="togglePeon('${p.id}',${!isDisp(p)})">${isDisp(p)?"Desactivar":"Activar"}</button>
-          <button class="btn btn-red" onclick="eliminarPeon('${p.id}')">✕</button>
+          ${dangerMode?`<button class="btn btn-red" onclick="eliminarPeon('${p.id}')">✕</button>`:""}
         </div>
       </div>`).join("");
   }
