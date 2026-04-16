@@ -70,12 +70,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(snap.exists()){
       ultimaRotacionTs=snap.data().ts;
       ultimaRotacionNotas=snap.data().notas||{};
-      // Restaurar estado editable si hay rotacionId y no expiró
       const d=snap.data();
-      if(d.rotacionId && d.editableHasta && Date.now()<d.editableHasta && !ultimaRotacionId){
-        ultimaRotacionId=d.rotacionId;
+      if(d.rotacionId){
+        // Siempre bloquear si hay rotación confirmada (oculta botones Liberar)
         formacionBloqueada=true;
-        const af=document.getElementById("acciones-formacion"); if(af) af.style.display="flex";
+        // Restaurar estado editable solo si el horario no venció
+        if(d.editableHasta && Date.now()<d.editableHasta && !ultimaRotacionId){
+          ultimaRotacionId=d.rotacionId;
+          const af=document.getElementById("acciones-formacion"); if(af) af.style.display="flex";
+        }
         scheduleRenderAll();
       }
       editableHastaLocal=d.editableHasta||null;
