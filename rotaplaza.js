@@ -367,10 +367,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     return `${y}-${m}-${day}`;
   }
 
+  function getAyerSlotPorMozo() {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const ayerFin = hoy.getTime() - 1;
+    const ayerInicio = ayerFin - 86399999;
+    const ayerRecs = historial.filter(h => h.ts >= ayerInicio && h.ts <= ayerFin && h.tipo !== "notas");
+    if (!ayerRecs.length) return {};
+    const rotId = ayerRecs[0]?.rotacionId;
+    const recs = rotId ? ayerRecs.filter(h => h.rotacionId === rotId) : ayerRecs;
+    const map = {};
+    recs.forEach(h => { if (h.mozoId && h.slotId) map[h.mozoId] = h.slotId; });
+    return map;
+  }
+
   function renderSectoresGrid() {
     const grid=document.getElementById("sectores-grid");
     if(sectores.length===0){grid.innerHTML=`<div class="empty">No hay sectores. Creá uno en Sectores.</div>`;return;}
 
+    const ayerMap = getAyerSlotPorMozo();
     let html=`<div class="slots-grid">`;
 
     let firstSector=true;
@@ -398,7 +412,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
             onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
           html+=`<span class="ss-nombre">${ss["nombre_"+turno]||ss.nombre}</span>`;
           if(mozo){
-            html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}</span>`;
+            const repite = ayerMap[mozo.id] === slotId;
+            html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${repite?' <b style="background:#c97c20;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Repite sector de ayer">↩</b>':''}</span>`;
             if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
             else if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -419,7 +434,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()">`;
         html+=`<span class="ss-nombre">${s.nombre}</span>`;
         if(mozo){
-          html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}</span>`;
+          const repite = ayerMap[mozo.id] === slotId;
+          html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${repite?' <b style="background:#c97c20;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Repite sector de ayer">↩</b>':''}</span>`;
           if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
           else if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -1201,15 +1217,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     mDisp.forEach(m=>{
       for(const h of historialReciente){
         if(h.mozoId!==m.id) continue;
-        const sl=
-          (h.slotId&&slots.find(s=>s.slotId===h.slotId))||
-          (h.subsector?slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector):null)||
-          (!h.subsector?slots.find(s=>s.sectorNombre===h.sector&&!s.ssNombre):null);
-        if(sl){
-          ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId);
-          ultimoSlotPorMozo[m.id]=sl.slotId;
-          break;
-        }
+        if(h.tipo==="notas"||!h.slotId) continue;
+        ultimoGrupoPorMozo[m.id]=grupoDeId(h.slotId.split("___")[0]);
+        ultimoSlotPorMozo[m.id]=h.slotId;
+        break;
       }
     });
 
@@ -1338,7 +1349,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           const penRep=penEvitarRepetir(largo.id,sectorId);
           const penDom=slotsDelSector.some(sl=>slotDomingoPorMozo[largo.id]===sl.slotId)?1:0;
           const penUltimoSlot=slotsDelSector.some(sl=>ultimoSlotPorMozo[largo.id]===sl.slotId)?1:0;
-          return dist*10000+penUltimoSlot*2000+penRep*1000+penDom*500+vecesSector*10+li;
+          return dist*10000+penUltimoSlot*12000+penRep*1000+penDom*500+vecesSector*10+li;
         })
       );
 
@@ -1379,7 +1390,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozosUsados=new Set();
 
     // Construir matriz de costos (mozos en orden circular × slots)
-    // Pesos: dist×10000 + penUltimoSlot×2000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
+    // Pesos: dist×10000 + penUltimoSlot×12000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
     // Las restricciones se marcan con INF para excluirlas de la asignación óptima
     const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
     const costMatrix = mozosCirular.map((mozo,mi) =>
@@ -1390,7 +1401,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
         const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
         const veces=conteo[mozo.id]?.[slot.slotId]||0;
-        return dist*10000 + penUltimoSlot*2000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
+        return dist*10000 + penUltimoSlot*12000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
       })
     );
 
@@ -1837,11 +1848,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     mDisp.forEach(m=>{
       for(const h of historialReciente){
         if(h.mozoId!==m.id) continue;
-        const sl=
-          (h.slotId&&slots.find(s=>s.slotId===h.slotId))||
-          (h.subsector?slots.find(s=>s.ssNombre===h.subsector&&s.sectorNombre===h.sector):null)||
-          (!h.subsector?slots.find(s=>s.sectorNombre===h.sector&&!s.ssNombre):null);
-        if(sl){ ultimoGrupoPorMozo[m.id]=grupoDeId(sl.sectorId); ultimoSlotPorMozo[m.id]=sl.slotId; break; }
+        if(h.tipo==="notas"||!h.slotId) continue;
+        ultimoGrupoPorMozo[m.id]=grupoDeId(h.slotId.split("___")[0]);
+        ultimoSlotPorMozo[m.id]=h.slotId;
+        break;
       }
     });
     const grupoIdealPorMozo={};
