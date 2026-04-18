@@ -1143,9 +1143,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     if(pLibres===0&&totalSlots>0){
       aviso.style.display="block";hint.style.display="none";
-      aviso.innerHTML=`<div class="aviso warn"><strong>⚠️ Todas las Plazas están asignadas</strong>Para volver a rotar, liberá al menos una plaza.</div>`;
-      btn.disabled=true;btn.style.opacity=".4";return;
+      aviso.innerHTML=`<div class="aviso info"><strong>✅ Asignación completa</strong>Todas las plazas están asignadas manualmente. Confirmá para guardar la rotación.</div>`;
+      btn.disabled=false;btn.style.opacity="1";btn.textContent="💾 CONFIRMAR ROTACIÓN";return;
     }
+    btn.textContent="⚡ GENERAR PLAZA";
     if(totalMozos===0||totalSlots===0){
       aviso.style.display="block";hint.style.display="none";
       aviso.innerHTML=`<div class="aviso error"><strong>⛔ Sin mozos o plazas</strong>Activá mozos en Personal y plazas en Salón.</div>`;
