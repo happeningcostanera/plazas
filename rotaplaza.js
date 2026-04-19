@@ -1143,10 +1143,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozosLibres=mDisp.filter(m=>!mozosYaAsignados.has(m.id));
     const nLibres=mozosLibres.length, pLibres=slotsLibres.length;
 
-    if(pLibres===0&&totalSlots>0&&!pendingHistorial){
-      aviso.style.display="block";hint.style.display="none";
-      aviso.innerHTML=`<div class="aviso info"><strong>✅ Asignación completa</strong>Todas las plazas están asignadas manualmente. Confirmá para guardar la rotación.</div>`;
-      btn.disabled=false;btn.style.opacity="1";btn.textContent="💾 CONFIRMAR ROTACIÓN";return;
+    if(pLibres===0&&totalSlots>0){
+      if(!pendingHistorial){
+        aviso.style.display="block";hint.style.display="none";
+        aviso.innerHTML=`<div class="aviso info"><strong>✅ Asignación completa</strong>Todas las plazas están asignadas manualmente. Confirmá para guardar la rotación.</div>`;
+        btn.disabled=false;btn.style.opacity="1";btn.textContent="💾 CONFIRMAR ROTACIÓN";
+      } else {
+        aviso.style.display="none";hint.style.display="none";
+        btn.disabled=true;btn.style.opacity=".4";btn.textContent="⚡ GENERAR PLAZA";
+      }
+      return;
     }
     btn.textContent="⚡ GENERAR PLAZA";
     if(totalMozos===0||totalSlots===0){
