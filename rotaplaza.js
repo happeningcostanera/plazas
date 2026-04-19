@@ -771,7 +771,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Actualizar opciones del selector sin destruir la selección actual
     const sel = document.getElementById("filtro-mozo");
     if (sel) {
-      const nombres = [...new Set(historial.map(h=>resolverNombreMozo(h)).filter(Boolean))].sort();
+      const nombres = [...new Set(historial.filter(h=>{
+        if(h.tipo==="barra"||h.tipo==="peon"||h.tipo==="notas") return false;
+        if(h.tipo==="mozo") return true;
+        return mozos.some(m=>m.id===h.mozoId);
+      }).map(h=>resolverNombreMozo(h)).filter(Boolean))].sort();
       // Solo reconstruir si cambió la lista de mozos
       const optsActuales = [...sel.options].map(o=>o.value).filter(Boolean).join(",");
       const optsNuevas = nombres.join(",");
@@ -781,7 +785,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       }
     }
 
-    let filtrado = historial.filter(h=>h.tipo!=="notas");
+    let filtrado = historial.filter(h=>{
+      if(h.tipo==="barra"||h.tipo==="peon"||h.tipo==="notas") return false;
+      if(h.tipo==="mozo") return true;
+      return mozos.some(m=>m.id===h.mozoId);
+    });
     if (filtroMozo)  filtrado = filtrado.filter(h => resolverNombreMozo(h) === filtroMozo);
     if (filtroFecha) filtrado = filtrado.filter(h => {
       if (!h.ts) return false;
@@ -839,7 +847,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     resumenEmpty.style.display="none";
 
     // Filtrar por fecha y/o mozo
-    let base = historial.filter(h=>h.tipo!=="notas");
+    let base = historial.filter(h=>(!h.tipo||h.tipo==="mozo")&&h.slotId);
     if (filtroFecha) base = base.filter(h => {
       if (!h.ts) return false;
       return toYMD(h.ts) === filtroFecha;
@@ -850,31 +858,44 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const mozosU = [...new Set(base.map(h=>resolverNombreMozo(h)).filter(Boolean))].sort();
     if (mozosU.length === 0) { resumenTable.innerHTML=`<div class="empty">Sin datos para este filtro.</div>`; return; }
 
-    // Construir labels de columna: "Sector › SubSector" para evitar ambigüedad
-    // Usar Set con label completo como clave única
-    const slotLabels = [...new Set(base.map(h => {
-      if(h.subsector) return h.sector+" › "+h.subsector;
-      return h.sector||"";
-    }).filter(Boolean))];
+    // Construir mapa slotId → label (cada plaza es una columna independiente)
+    const slotIdMap = new Map(); // slotId -> label display
+    base.forEach(h => {
+      if (!slotIdMap.has(h.slotId)) {
+        const lbl = h.subsector ? `${h.sector} › ${h.subsector}` : (h.sector||"");
+        slotIdMap.set(h.slotId, lbl);
+      }
+    });
 
-    // Ordenar por sector primero, luego subsector
-    slotLabels.sort();
+    // Ordenar slotIds por orden del sector, luego subsector
+    const slotIds = [...slotIdMap.keys()].sort((a, b) => {
+      const lblA = slotIdMap.get(a); const lblB = slotIdMap.get(b);
+      const [secA, subA] = lblA.split(" › ");
+      const [secB, subB] = lblB.split(" › ");
+      const sA = sectores.find(s=>s.nombre===secA);
+      const sB = sectores.find(s=>s.nombre===secB);
+      const oA = sA?.orden ?? 999;
+      const oB = sB?.orden ?? 999;
+      if (oA !== oB) return oA - oB;
+      if (!subA && !subB) return 0;
+      const ssA = sA?.subsectores?.findIndex(ss=>ss.nombre===subA) ?? 0;
+      const ssB = sB?.subsectores?.findIndex(ss=>ss.nombre===subB) ?? 0;
+      return ssA - ssB;
+    });
 
-    // Precalcular conteos por (mozo, slotLabel) para no filtrar en cada celda
+    // Precalcular conteos por (mozo, slotId)
     const resumenCountMap = new Map();
     base.forEach(h=>{
       const nm=resolverNombreMozo(h);
       if(!nm) return;
-      const lbl = h.subsector ? `${h.sector} › ${h.subsector}` : (h.sector||"");
-      if(!lbl) return;
-      const key = `${nm}||${lbl}`;
+      const key = `${nm}||${h.slotId}`;
       resumenCountMap.set(key,(resumenCountMap.get(key)||0)+1);
     });
 
     // Construir tabla
     let html = `<table class="resumen-table"><thead><tr><th>Mozo</th>`;
-    slotLabels.forEach(lbl => {
-      // Mostrar en dos líneas: sector arriba, subsector abajo
+    slotIds.forEach(slotId => {
+      const lbl = slotIdMap.get(slotId);
       const parts = lbl.split(" › ");
       const display = parts.length>1
         ? `<span style="font-size:9px;color:var(--text3);display:block">${parts[0]}</span>${parts[1]}`
@@ -884,11 +905,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     html += `<th>Total</th></tr></thead><tbody>`;
 
     mozosU.forEach(mozo => {
-      const filas = base.filter(h => resolverNombreMozo(h) === mozo);
-      const total = filas.length;
+      const total = base.filter(h => resolverNombreMozo(h) === mozo).length;
       html += `<tr><td>${mozo}</td>`;
-      slotLabels.forEach(lbl => {
-        const key = `${mozo}||${lbl}`;
+      slotIds.forEach(slotId => {
+        const key = `${mozo}||${slotId}`;
         const n = resumenCountMap.get(key)||0;
         html += `<td><span class="resumen-count ${n===0?"zero":""}">${n||"—"}</span></td>`;
       });
@@ -1515,8 +1535,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     const rotacionId=ultimaRotacionId||ahora.toString();
 
-    // Si estamos re-confirmando (editando formación), borrar los registros anteriores por rotacionId
-    const oldSnap = await getDocs(query(histCol, where("rotacionId","==",rotacionId)));
+    // Borrar registros del período actual del turno para garantizar una sola rotación por día×turno
+    // Mañana: desde 00:00 | Noche: desde 17:00 (inicio del turno)
+    const periodoInicio=new Date(ahora);
+    periodoInicio.setHours(turno==="noche"?17:0, 0, 0, 0);
+    const oldSnap = await getDocs(query(histCol, where("ts",">=",periodoInicio.getTime())));
     const batch=writeBatch(db);
     oldSnap.docs.forEach(d=>batch.delete(d.ref));
 
@@ -1535,8 +1558,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const hoy=new Date(ahora);
     let editableHasta;
     if(turno==="noche"){
-      const manana=new Date(hoy); manana.setDate(manana.getDate()+1); manana.setHours(2,0,0,0);
-      editableHasta=manana.getTime();
+      const medianoche=new Date(hoy); medianoche.setHours(23,59,59,999);
+      editableHasta=medianoche.getTime();
     } else {
       const limite=new Date(hoy); limite.setHours(17,0,0,0);
       editableHasta=limite.getTime();

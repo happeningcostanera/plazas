@@ -119,10 +119,10 @@ input[type=text]:focus{border-color:var(--gold)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .resumen-table{width:100%;border-collapse:collapse;font-size:12px}
-.resumen-table th{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;text-align:center;border-bottom:1px solid var(--border2);white-space:nowrap}
-.resumen-table th:first-child{text-align:left}
+.resumen-table th{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;text-align:center;border-bottom:1px solid var(--border2);white-space:nowrap;position:sticky;top:0;z-index:1;background:var(--bg2)}
+.resumen-table th:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--bg2)}
 .resumen-table td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:center}
-.resumen-table td:first-child{text-align:left;color:var(--text);font-weight:500}
+.resumen-table td:first-child{text-align:left;color:var(--text);font-weight:500;position:sticky;left:0;z-index:1;background:var(--bg2)}
 .resumen-table tr:last-child td{border-bottom:none}
 .resumen-count{display:inline-block;min-width:22px;font-weight:600;color:var(--gold2)}
 .resumen-count.zero{color:var(--text3);font-weight:400}
