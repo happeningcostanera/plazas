@@ -1123,8 +1123,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const hint=document.getElementById("rotar-hint");
     if(!aviso||!btn) return;
 
-    if(formacionBloqueada){ btn.textContent="⚡ GENERAR PLAZA";btn.disabled=true;btn.style.opacity=".4";aviso.style.display="none";hint.style.display="none"; return; }
-
     if(fueraDeHorario()){
       const label=turno==="manana"?"08:00 y las 17:00":"las 17:00 y las 02:00";
       aviso.style.display="block";hint.style.display="none";
@@ -1132,6 +1130,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       btn.style.display="none";return;
     }
     btn.style.display="";
+
+    if(formacionBloqueada){ btn.textContent="⚡ GENERAR PLAZA";btn.disabled=true;btn.style.opacity=".4";aviso.style.display="none";hint.style.display="none"; return; }
 
     const mDisp=mozos.filter(m=>isDisp(m));
     const slots=getSlots();
