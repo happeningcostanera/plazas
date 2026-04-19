@@ -1123,7 +1123,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const hint=document.getElementById("rotar-hint");
     if(!aviso||!btn) return;
 
-    if(formacionBloqueada){ btn.textContent="⚡ GENERAR PLAZA";btn.disabled=true;btn.style.opacity=".4"; return; }
+    if(formacionBloqueada){ btn.textContent="⚡ GENERAR PLAZA";btn.disabled=true;btn.style.opacity=".4";aviso.style.display="none";hint.style.display="none"; return; }
 
     if(fueraDeHorario()){
       const label=turno==="manana"?"08:00 y las 17:00":"las 17:00 y las 02:00";
