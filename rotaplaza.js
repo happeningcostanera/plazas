@@ -1391,7 +1391,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
     const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
 
-    const todoPreAsignado=slotsLibres.length===0&&mozosLibres.length===0;
+    const todoPreAsignado=slotsLibres.length===0;
     if(!todoPreAsignado){
       if(mozosLibres.length===0||slotsLibres.length===0||mozosLibres.length!==slotsLibres.length) return;
     }
