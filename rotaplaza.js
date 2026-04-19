@@ -1385,63 +1385,71 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const slotsLibres=slots.filter(sl=>!slotsPreAsignados.has(sl.slotId));
     const mozosLibres=mDisp.filter(m=>!mozosPreAsignados.has(m.id));
 
-    if(mozosLibres.length===0||slotsLibres.length===0||mozosLibres.length!==slotsLibres.length) return;
-    const n=mozosLibres.length;
-
-    // Leer índice circular desde Firestore
-    const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
-    const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
-
-    const resultado=[], advertencias=[];
-    const mozosUsados=new Set();
-
-    // Construir matriz de costos (mozos en orden circular × slots)
-    // Pesos: dist×10000 + penUltimoSlot×12000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
-    // Las restricciones se marcan con INF para excluirlas de la asignación óptima
-    const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
-    const costMatrix = mozosCirular.map((mozo,mi) =>
-      slotsLibres.map(slot => {
-        if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
-        const dist=distanciaGrupo(mozo.id,slot.sectorId);
-        const penUltimoSlot=(ultimoSlotPorMozo[mozo.id]===slot.slotId)?1:0;
-        const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
-        const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
-        const veces=conteo[mozo.id]?.[slot.slotId]||0;
-        return dist*10000 + penUltimoSlot*12000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
-      })
-    );
-
-    const asignacion=hungarianAssign(costMatrix);
-    const slotsUsados=new Set();
-    asignacion.forEach((slotIdx,mozoCircIdx)=>{
-      const mozo=mozosCirular[mozoCircIdx];
-      const slot=slotsLibres[slotIdx];
-      if(costMatrix[mozoCircIdx][slotIdx]>=INF){
-        advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo válido (revisar restricciones)`);
-        return;
-      }
-      resultado.push({slotId:slot.slotId,mozoId:mozo.id,slot});
-      mozosUsados.add(mozo.id);
-      slotsUsados.add(slot.slotId);
-    });
-    // Advertir slots que quedaron sin mozo (por restricciones)
-    slotsLibres.forEach(slot=>{
-      if(!slotsUsados.has(slot.slotId))
-        advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
-    });
-
-    if(resultado.length===0){
-      alert("⛔ No se pudo rotar:\n\n"+advertencias.join("\n"));
-      return;
+    const todoPreAsignado=slotsLibres.length===0&&mozosLibres.length===0;
+    if(!todoPreAsignado){
+      if(mozosLibres.length===0||slotsLibres.length===0||mozosLibres.length!==slotsLibres.length) return;
     }
 
-    const nuevoIdx=(idx+1)%n;
-    const batch=writeBatch(db);
-    resultado.forEach(({slotId,mozoId})=>batch.set(doc(asigCol,slotId),{mozoId,desde:ahora}));
-    batch.set(doc(db,"meta","rotacion"+metaSuffix),{idx:nuevoIdx},{merge:true});
-    await batch.commit();
+    const resultado=[], advertencias=[];
 
-    mozoRotIdx=nuevoIdx;
+    if(!todoPreAsignado){
+      const n=mozosLibres.length;
+
+      // Leer índice circular desde Firestore
+      const idxSnap=await getDoc(doc(db,"meta","rotacion"+metaSuffix));
+      const idx=idxSnap.exists()?(idxSnap.data().idx||0):0;
+
+      const mozosUsados=new Set();
+
+      // Construir matriz de costos (mozos en orden circular × slots)
+      // Pesos: dist×10000 + penUltimoSlot×12000 + penRepetir×1000 + penDomingo×500 + veces×10 + circularPos
+      // Las restricciones se marcan con INF para excluirlas de la asignación óptima
+      const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
+      const costMatrix = mozosCirular.map((mozo,mi) =>
+        slotsLibres.map(slot => {
+          if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
+          const dist=distanciaGrupo(mozo.id,slot.sectorId);
+          const penUltimoSlot=(ultimoSlotPorMozo[mozo.id]===slot.slotId)?1:0;
+          const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
+          const penDomingo=(slotDomingoPorMozo[mozo.id]===slot.slotId)?1:0;
+          const veces=conteo[mozo.id]?.[slot.slotId]||0;
+          return dist*10000 + penUltimoSlot*12000 + penRepetir*1000 + penDomingo*500 + veces*10 + mi;
+        })
+      );
+
+      const asignacion=hungarianAssign(costMatrix);
+      const slotsUsados=new Set();
+      asignacion.forEach((slotIdx,mozoCircIdx)=>{
+        const mozo=mozosCirular[mozoCircIdx];
+        const slot=slotsLibres[slotIdx];
+        if(costMatrix[mozoCircIdx][slotIdx]>=INF){
+          advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo válido (revisar restricciones)`);
+          return;
+        }
+        resultado.push({slotId:slot.slotId,mozoId:mozo.id,slot});
+        mozosUsados.add(mozo.id);
+        slotsUsados.add(slot.slotId);
+      });
+      // Advertir slots que quedaron sin mozo (por restricciones)
+      slotsLibres.forEach(slot=>{
+        if(!slotsUsados.has(slot.slotId))
+          advertencias.push(`⛔ ${slot.ssNombre||slot.sectorNombre}: sin mozo (revisar restricciones)`);
+      });
+
+      if(resultado.length===0){
+        alert("⛔ No se pudo rotar:\n\n"+advertencias.join("\n"));
+        return;
+      }
+
+      const nuevoIdx=(idx+1)%n;
+      const batch=writeBatch(db);
+      resultado.forEach(({slotId,mozoId})=>batch.set(doc(asigCol,slotId),{mozoId,desde:ahora}));
+      batch.set(doc(db,"meta","rotacion"+metaSuffix),{idx:nuevoIdx},{merge:true});
+      await batch.commit();
+
+      mozoRotIdx=nuevoIdx;
+    }
+
     // Incluir en el historial tanto las asignaciones automáticas como las manuales previas
     const todasLasAsig=[];
     // Primero las pre-asignadas manualmente
