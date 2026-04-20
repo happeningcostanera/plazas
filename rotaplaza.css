@@ -57,6 +57,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn-green{background:var(--green);color:#d0ffd0}
 .btn-orange{background:var(--orange);color:#ffe0c0}
 .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+/* CHECKLIST PREVIOS */
+.checklist-pasos{background:var(--bg);border:1px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.checklist-header{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;padding:8px 12px 6px;border-bottom:1px solid var(--border)}
+.cpaso{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.cpaso:last-child{border-bottom:none}
+.cpaso:hover{background:var(--bg2)}
+.cpaso-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.cpaso-num.ok{background:rgba(74,143,58,.2);border:1px solid var(--green);color:var(--green2)}
+.cpaso-num.warn{background:rgba(176,90,16,.22);border:1px solid var(--orange);color:#f0a060}
+.cpaso-num.neutral{background:var(--bg3);border:1px solid var(--border2);color:var(--text3)}
+.cpaso-body{flex:1;min-width:0}
+.cpaso-title{font-size:12px;font-weight:600;color:var(--text2)}
+.cpaso-desc{font-size:10px;color:var(--text3);margin-top:1px}
+.cpaso-estado{font-size:11px;white-space:nowrap;flex-shrink:0}
+.cpaso-estado.ok{color:var(--green2)}.cpaso-estado.warn{color:#f0a060}.cpaso-estado.neutral{color:var(--text3)}
 .btn-rotar{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--bg);font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:opacity .2s;margin-bottom:10px}
 .btn-rotar:active{opacity:.8}.btn-rotar:disabled{cursor:not-allowed}
 /* INPUTS */

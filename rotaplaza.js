@@ -318,8 +318,70 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     </div>`;
   }
 
+  function renderPasosPrevios() {
+    const el=document.getElementById("pasos-previos");
+    if(!el) return;
+    const mDisp=mozos.filter(m=>isDisp(m));
+    const conRestr=mDisp.filter(m=>(m.restricciones||[]).length>0);
+    const conFija=mDisp.filter(m=>m.plazaFija);
+    const slots=getSlots();
+    const slotIdsNormales=slots.map(s=>s.slotId);
+    const fijasSlotIds=new Set(conFija.map(m=>m.plazaFija));
+    const manualesHoy=Object.keys(asignaciones).filter(id=>slotIdsNormales.includes(id)&&!fijasSlotIds.has(id));
+
+    const p1ok=conRestr.length>0;
+    const p1txt=p1ok?`${conRestr.length} mozo${conRestr.length!==1?"s":""} ✓`:"sin definir ⚠";
+
+    const p2ok=conFija.length>0;
+    const p2txt=p2ok?`${conFija.length} fija${conFija.length!==1?"s":""} ✓`:"ninguna";
+
+    const p3ok=manualesHoy.length>0;
+    const p3txt=p3ok?`${manualesHoy.length} asignada${manualesHoy.length!==1?"s":""} ✓`:"ninguna (opcional)";
+
+    const deficit=slots.length-mDisp.length;
+    const p4ok=deficit<=0;
+    const p4txt=p4ok?`${mDisp.length} mozos / ${slots.length} plazas ✓`:`faltan ${deficit} mozo${deficit!==1?"s":""} ⚠`;
+
+    el.innerHTML=`
+      <div class="checklist-pasos">
+        <div class="checklist-header">Antes de generar — verificá estos pasos</div>
+        <div class="cpaso" onclick="switchTab('personal',document.querySelector('.tab-btn:nth-child(2)'))">
+          <div class="cpaso-num ${p1ok?'ok':'warn'}">1</div>
+          <div class="cpaso-body">
+            <div class="cpaso-title">Restricciones en Personal</div>
+            <div class="cpaso-desc">Sectores que cada mozo no puede cubrir</div>
+          </div>
+          <div class="cpaso-estado ${p1ok?'ok':'warn'}">${p1txt}</div>
+        </div>
+        <div class="cpaso" onclick="switchTab('personal',document.querySelector('.tab-btn:nth-child(2)'))">
+          <div class="cpaso-num ${p2ok?'ok':'neutral'}">2</div>
+          <div class="cpaso-body">
+            <div class="cpaso-title">Plazas fijas permanentes (📌)</div>
+            <div class="cpaso-desc">Mozos que siempre van al mismo sector — configurá en Personal</div>
+          </div>
+          <div class="cpaso-estado ${p2ok?'ok':'neutral'}">${p2txt}</div>
+        </div>
+        <div class="cpaso" style="cursor:default">
+          <div class="cpaso-num ${p3ok?'ok':'neutral'}">3</div>
+          <div class="cpaso-body">
+            <div class="cpaso-title">Asignaciones manuales del día</div>
+            <div class="cpaso-desc">Para casos especiales de hoy: tocá el slot → elegí el mozo → después generá. El sistema respeta lo asignado y completa el resto.</div>
+          </div>
+          <div class="cpaso-estado ${p3ok?'ok':'neutral'}">${p3txt}</div>
+        </div>
+        <div class="cpaso" style="cursor:default">
+          <div class="cpaso-num ${p4ok?'ok':'warn'}">4</div>
+          <div class="cpaso-body">
+            <div class="cpaso-title">Balance personal / plazas</div>
+            <div class="cpaso-desc">Suficientes mozos disponibles para cubrir todas las plazas</div>
+          </div>
+          <div class="cpaso-estado ${p4ok?'ok':'warn'}">${p4txt}</div>
+        </div>
+      </div>`;
+  }
+
   function renderAll() {
-    renderStats(); renderAvisoGlobal(); renderAvisoRotacion(); renderUltimaRotacion();
+    renderStats(); renderAvisoGlobal(); renderAvisoRotacion(); renderUltimaRotacion(); renderPasosPrevios();
     const btnLib=document.getElementById("btn-liberar-todo");
     if(btnLib) btnLib.style.display=Object.keys(asignaciones).length>0?"inline-block":"none";
     renderSectoresGrid(); renderLibres(); renderPersonal(); renderSectoresConfig(); renderBarraGrid(); renderPeonesGrid();
