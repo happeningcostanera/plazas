@@ -326,18 +326,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const conFija=mDisp.filter(m=>m.plazaFija);
     const slots=getSlots();
     const slotIdsNormales=slots.map(s=>s.slotId);
+    // Asignaciones manuales del día: slots normales asignados que NO corresponden a plazaFija
     const fijasSlotIds=new Set(conFija.map(m=>m.plazaFija));
     const manualesHoy=Object.keys(asignaciones).filter(id=>slotIdsNormales.includes(id)&&!fijasSlotIds.has(id));
 
+    // Paso 1: restricciones
     const p1ok=conRestr.length>0;
     const p1txt=p1ok?`${conRestr.length} mozo${conRestr.length!==1?"s":""} ✓`:"sin definir ⚠";
 
+    // Paso 2: plazas fijas permanentes (📌 en Personal)
     const p2ok=conFija.length>0;
     const p2txt=p2ok?`${conFija.length} fija${conFija.length!==1?"s":""} ✓`:"ninguna";
 
+    // Paso 3: asignaciones manuales del día
     const p3ok=manualesHoy.length>0;
     const p3txt=p3ok?`${manualesHoy.length} asignada${manualesHoy.length!==1?"s":""} ✓`:"ninguna (opcional)";
 
+    // Paso 4: balance mozos/plazas
     const deficit=slots.length-mDisp.length;
     const p4ok=deficit<=0;
     const p4txt=p4ok?`${mDisp.length} mozos / ${slots.length} plazas ✓`:`faltan ${deficit} mozo${deficit!==1?"s":""} ⚠`;
@@ -478,7 +483,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           html+=`<span class="ss-nombre">${ss["nombre_"+turno]||ss.nombre}</span>`;
           if(mozo){
             const repite = ayerMap[mozo.id] === slotId;
-            html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${repite?' <b style="background:#c97c20;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Repite sector de ayer">↩</b>':''}</span>`;
+            html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${asig.manual?' <b style="background:#1a8090;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Asignado manualmente">M</b>':''}${repite?' <b style="background:#c97c20;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Repite sector de ayer">↩</b>':''}</span>`;
             if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
             else if(ss.descripcion) html+=`<span class="ss-desc">${ss.descripcion}</span>`;
             if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -500,7 +505,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html+=`<span class="ss-nombre">${s.nombre}</span>`;
         if(mozo){
           const repite = ayerMap[mozo.id] === slotId;
-          html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${repite?' <b style="background:#c97c20;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Repite sector de ayer">↩</b>':''}</span>`;
+          html+=`<span class="ss-mozo">${mozo.nombre}${mozo.largo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${asig.manual?' <b style="background:#1a8090;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Asignado manualmente">M</b>':''}${repite?' <b style="background:#c97c20;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Repite sector de ayer">↩</b>':''}</span>`;
           if(asig.comentario) html+=`<span class="ss-desc" style="color:#f0c060;font-style:italic">💬 ${asig.comentario}</span>`;
           else if(s.descripcion) html+=`<span class="ss-desc">${s.descripcion}</span>`;
           if(!formacionBloqueada) html+=`<button class="ss-liberar" onclick="event.stopPropagation();liberarSlot('${slotId}')">Liberar</button>`;
@@ -1091,7 +1096,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html+=`<div class="rotacion-chip">`;
         html+=`<span class="rotacion-chip-ss">${ssNombre}</span>`;
         const esLargo=mozos.find(m=>m.id===h.mozoId)?.largo;
-        html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}${esLargo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}</span>`;
+        html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}${esLargo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${h.manual?' <b style="background:#1a8090;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Asignado manualmente">M</b>':''}</span>`;
         if(h.comentario) html+=`<span style="font-size:9px;color:#f0c060;font-style:italic">💬 ${h.comentario}</span>`;
         html+=`</div>`;
       });
@@ -1575,7 +1580,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const asig=asignaciones[sl.slotId];
       if(!asig) return;
       const mozo=mozos.find(m=>m.id===asig.mozoId);
-      if(mozo){const h={mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",slotId:sl.slotId,tipo:"mozo",ts:ahora};if(asig.comentario)h.comentario=asig.comentario;histActual.push(h);}
+      if(mozo){const h={mozoId:asig.mozoId,mozoNombre:mozo.nombre,sector:sl.sectorNombre,subsector:sl.ssNombre||"",slotId:sl.slotId,tipo:"mozo",ts:ahora};if(asig.comentario)h.comentario=asig.comentario;if(asig.manual)h.manual=true;histActual.push(h);}
     });
     // Barra
     const slotsBar=getSlotsBar();
@@ -1698,10 +1703,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const ahora=Date.now();
     if(pendingHistorial&&pendingHistorial.length>0){
       // En modo edición/rotación pendiente: solo asignar, el historial se graba al confirmar
-      await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
+      await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora,manual:true});
     } else {
       // Asignación suelta: solo asignar, el historial se graba al confirmar
-      await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora});
+      await setDoc(doc(asigCol,popupSlotId),{mozoId,desde:ahora,manual:true});
     }
     cerrarPopup();
   };
