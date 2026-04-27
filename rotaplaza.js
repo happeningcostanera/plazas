@@ -344,8 +344,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     // Paso 4: balance mozos/plazas
     const deficit=slots.length-mDisp.length;
-    const p4ok=deficit<=0;
-    const p4txt=p4ok?`${mDisp.length} mozos / ${slots.length} plazas ✓`:`faltan ${deficit} mozo${deficit!==1?"s":""} ⚠`;
+    const p4ok=deficit===0;
+    const p4class=p4ok?'ok':'warn';
+    const p4txt=p4ok
+      ?`${mDisp.length} mozos / ${slots.length} plazas ✓`
+      :deficit>0
+        ?`faltan ${deficit} mozo${deficit!==1?"s":""} ⚠`
+        :`sobran ${-deficit} mozo${-deficit!==1?"s":""} ⚠`;
 
     el.innerHTML=`
       <div class="checklist-pasos">
@@ -375,12 +380,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           <div class="cpaso-estado ${p3ok?'ok':'neutral'}">${p3txt}</div>
         </div>
         <div class="cpaso" style="cursor:default">
-          <div class="cpaso-num ${p4ok?'ok':'warn'}">4</div>
+          <div class="cpaso-num ${p4class}">4</div>
           <div class="cpaso-body">
             <div class="cpaso-title">Balance personal / plazas</div>
             <div class="cpaso-desc">Suficientes mozos disponibles para cubrir todas las plazas</div>
           </div>
-          <div class="cpaso-estado ${p4ok?'ok':'warn'}">${p4txt}</div>
+          <div class="cpaso-estado ${p4class}">${p4txt}</div>
         </div>
       </div>`;
   }
