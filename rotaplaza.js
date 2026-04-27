@@ -1096,7 +1096,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         html+=`<div class="rotacion-chip">`;
         html+=`<span class="rotacion-chip-ss">${ssNombre}</span>`;
         const esLargo=mozos.find(m=>m.id===h.mozoId)?.largo;
-        html+=`<span class="rotacion-chip-mozo">${resolverNombreMozo(h)||"—"}${esLargo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${h.manual?' <b style="background:#1a8090;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Asignado manualmente">M</b>':''}</span>`;
+        html+=`<span class="rotacion-chip-mozo">${h.mozoNombre||resolverNombreMozo(h)||"—"}${esLargo?' <b style="background:#c03020;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle">L</b>':''}${h.manual?' <b style="background:#1a8090;color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;vertical-align:middle" title="Asignado manualmente">M</b>':''}</span>`;
         if(h.comentario) html+=`<span style="font-size:9px;color:#f0c060;font-style:italic">💬 ${h.comentario}</span>`;
         html+=`</div>`;
       });
@@ -1124,7 +1124,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           regs.forEach(h=>{
             html+=`<div class="rotacion-chip" style="border-color:#5a8fa0;background:linear-gradient(135deg,#14293a,#1a3040)">`;
             if(h.subsector) html+=`<span class="rotacion-chip-ss">${h.subsector}</span>`;
-            html+=`<span class="rotacion-chip-mozo" style="color:#90cfe0">${resolverNombreMozo(h)||"—"}</span>`;
+            html+=`<span class="rotacion-chip-mozo" style="color:#90cfe0">${h.mozoNombre||resolverNombreMozo(h)||"—"}</span>`;
             html+=`</div>`;
           });
           html+=`</div>`;
@@ -1146,7 +1146,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           html+=`<div class="rotacion-sector-row">`;
           regs.forEach(h=>{
             html+=`<div class="rotacion-chip" style="border-color:#b080d0;background:linear-gradient(135deg,#2a1a3a,#302040)">`;
-            html+=`<span class="rotacion-chip-mozo" style="color:#d0a0f0">${resolverNombreMozo(h)||"—"}</span>`;
+            html+=`<span class="rotacion-chip-mozo" style="color:#d0a0f0">${h.mozoNombre||resolverNombreMozo(h)||"—"}</span>`;
             html+=`</div>`;
           });
           html+=`</div>`;
