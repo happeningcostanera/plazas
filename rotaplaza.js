@@ -62,7 +62,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   onSnapshot(query(sectoresPeonCol,orderBy("orden","asc")), snap => { sectoresPeon=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(query(sectoresCol,orderBy("orden","asc")), snap => { sectores=snap.docs.map(d=>({id:d.id,...d.data()})); scheduleRenderAll(); });
   onSnapshot(asigCol, snap => { asignaciones={}; snap.docs.forEach(d=>{asignaciones[d.id]=d.data();}); scheduleRenderAll(); });
-  onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); });
+  onSnapshot(query(histCol,orderBy("ts","desc")), snap => { historial=snap.docs.map(d=>({id:d.id,...d.data()})); renderHistorial(); renderRotaciones(); renderInforme(); });
   onSnapshot(feedbackCol, snap => { feedbackPorRotacion={}; snap.docs.forEach(d=>{ feedbackPorRotacion[d.id]=d.data().feedback||""; }); renderRotaciones(); });
   const metaSuffix = turnoValido ? "_" + turno : "";
   let ultimaRotacionNotas={};
@@ -988,6 +988,69 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     });
     html += `</tbody></table>`;
     resumenTable.innerHTML = html;
+  }
+
+  function renderInforme() {
+    const cont=document.getElementById("informe-table");
+    const emptyEl=document.getElementById("informe-empty");
+    if(!cont||!emptyEl) return;
+
+    const ahora=Date.now();
+    const treintaDias=ahora-30*24*60*60*1000;
+    const base=historial.filter(h=>h.ts>treintaDias&&(!h.tipo||h.tipo==="mozo")&&h.mozoId&&h.sector);
+
+    if(base.length===0){
+      emptyEl.style.display="block"; cont.innerHTML=""; return;
+    }
+    emptyEl.style.display="none";
+
+    // Sectores usados, ordenados según el orden actual de sectores
+    const sectorOrder=sectores.map(s=>s.nombre);
+    const sectoresUsados=[...new Set(base.map(h=>h.sector))].sort((a,b)=>{
+      const ia=sectorOrder.indexOf(a), ib=sectorOrder.indexOf(b);
+      if(ia===-1&&ib===-1) return a.localeCompare(b);
+      if(ia===-1) return 1; if(ib===-1) return -1;
+      return ia-ib;
+    });
+
+    // Mozos únicos con nombre resuelto
+    const mozosMap=new Map();
+    base.forEach(h=>{
+      if(!mozosMap.has(h.mozoId)){
+        const m=mozos.find(m=>m.id===h.mozoId);
+        mozosMap.set(h.mozoId, m?m.nombre:(h.mozoNombre||h.mozoId));
+      }
+    });
+    const mozosU=[...mozosMap.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+
+    // Conteo mozo×sector y rotaciones distintas por mozo
+    const sectorCount=new Map();
+    const rotSet=new Map();
+    base.forEach(h=>{
+      const sk=`${h.mozoId}||${h.sector}`;
+      sectorCount.set(sk,(sectorCount.get(sk)||0)+1);
+      if(h.rotacionId){
+        if(!rotSet.has(h.mozoId)) rotSet.set(h.mozoId,new Set());
+        rotSet.get(h.mozoId).add(h.rotacionId);
+      }
+    });
+
+    let html=`<table class="resumen-table"><thead><tr><th>Mozo</th>`;
+    sectoresUsados.forEach(s=>html+=`<th>${s}</th>`);
+    html+=`<th title="Rotaciones en las que participó">Rotaciones</th></tr></thead><tbody>`;
+
+    mozosU.forEach(([mozoId,nombre])=>{
+      html+=`<tr><td>${nombre}</td>`;
+      sectoresUsados.forEach(s=>{
+        const n=sectorCount.get(`${mozoId}||${s}`)||0;
+        html+=`<td><span class="resumen-count ${n===0?"zero":""}">${n||"—"}</span></td>`;
+      });
+      const rots=rotSet.get(mozoId)?.size||0;
+      html+=`<td><strong style="color:var(--gold2)">${rots}</strong></td></tr>`;
+    });
+
+    html+=`</tbody></table>`;
+    cont.innerHTML=html;
   }
 
   // ===================== ROTACIONES VISUALES =====================
