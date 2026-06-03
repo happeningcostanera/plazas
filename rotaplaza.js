@@ -1004,13 +1004,26 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     }
     emptyEl.style.display="none";
 
-    // Sectores usados, ordenados según el orden actual de sectores
+    // Columnas: una por sector+subsector único. Key = "sector|||subsector" (o "sector|||" si no hay subsector)
+    const colKeyMap=new Map(); // key -> label display
+    base.forEach(h=>{
+      const key=`${h.sector}|||${h.subsector||""}`;
+      if(!colKeyMap.has(key)) colKeyMap.set(key, h.subsector||h.sector);
+    });
+
+    // Ordenar columnas por orden de sector, luego subsector dentro del sector
     const sectorOrder=sectores.map(s=>s.nombre);
-    const sectoresUsados=[...new Set(base.map(h=>h.sector))].sort((a,b)=>{
-      const ia=sectorOrder.indexOf(a), ib=sectorOrder.indexOf(b);
-      if(ia===-1&&ib===-1) return a.localeCompare(b);
-      if(ia===-1) return 1; if(ib===-1) return -1;
-      return ia-ib;
+    const cols=[...colKeyMap.entries()].sort((a,b)=>{
+      const [secA,subA]=a[0].split("|||");
+      const [secB,subB]=b[0].split("|||");
+      const ia=sectorOrder.indexOf(secA), ib=sectorOrder.indexOf(secB);
+      const oA=ia===-1?999:ia, oB=ib===-1?999:ib;
+      if(oA!==oB) return oA-oB;
+      const sA=sectores.find(s=>s.nombre===secA);
+      const sB=sectores.find(s=>s.nombre===secB);
+      const ssA=sA?.subsectores?.findIndex(ss=>ss.nombre===subA)??0;
+      const ssB=sB?.subsectores?.findIndex(ss=>ss.nombre===subB)??0;
+      return ssA-ssB;
     });
 
     // Mozos únicos con nombre resuelto
@@ -1023,12 +1036,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     });
     const mozosU=[...mozosMap.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
 
-    // Conteo mozo×sector y rotaciones distintas por mozo
-    const sectorCount=new Map();
+    // Conteo mozo×colKey y rotaciones distintas por mozo
+    const colCount=new Map();
     const rotSet=new Map();
     base.forEach(h=>{
-      const sk=`${h.mozoId}||${h.sector}`;
-      sectorCount.set(sk,(sectorCount.get(sk)||0)+1);
+      const ck=`${h.mozoId}||${h.sector}|||${h.subsector||""}`;
+      colCount.set(ck,(colCount.get(ck)||0)+1);
       if(h.rotacionId){
         if(!rotSet.has(h.mozoId)) rotSet.set(h.mozoId,new Set());
         rotSet.get(h.mozoId).add(h.rotacionId);
@@ -1036,13 +1049,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     });
 
     let html=`<table class="resumen-table"><thead><tr><th>Mozo</th>`;
-    sectoresUsados.forEach(s=>html+=`<th>${s}</th>`);
+    cols.forEach(([,label])=>html+=`<th>${label}</th>`);
     html+=`<th title="Rotaciones en las que participó">Rotaciones</th></tr></thead><tbody>`;
 
     mozosU.forEach(([mozoId,nombre])=>{
       html+=`<tr><td>${nombre}</td>`;
-      sectoresUsados.forEach(s=>{
-        const n=sectorCount.get(`${mozoId}||${s}`)||0;
+      cols.forEach(([colKey])=>{
+        const n=colCount.get(`${mozoId}||${colKey}`)||0;
         html+=`<td><span class="resumen-count ${n===0?"zero":""}">${n||"—"}</span></td>`;
       });
       const rots=rotSet.get(mozoId)?.size||0;
