@@ -1053,6 +1053,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     cont.innerHTML=html;
   }
 
+  window.imprimirInforme = function() {
+    document.body.classList.add("print-informe");
+    window.print();
+    document.body.classList.remove("print-informe");
+  };
+
   // ===================== ROTACIONES VISUALES =====================
   let rotacionesAgrupadas=[];
   let rotPaginaActual=0;

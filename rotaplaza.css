@@ -204,6 +204,31 @@ select{appearance:none}
   body.turno-noche #ultima-rotacion > div { border-bottom-color: #5a8fa0 !important; }
   body.turno-noche #ultima-rotacion span:first-child { color: #2a6a80 !important; }
   body.turno-noche #barra-op-section .section-title, body.turno-noche #peones-op-section .section-title { color: #2a6a80 !important; border-bottom-color: #5a8fa0 !important; }
+
+  /* Impresión Balance 30 */
+  body.print-informe #header,
+  body.print-informe #tabs,
+  body.print-informe #pendiente-banner,
+  body.print-informe #tab-operacion,
+  body.print-informe #tab-personal,
+  body.print-informe #tab-sectores,
+  body.print-informe #tab-barra,
+  body.print-informe #tab-peones,
+  body.print-informe #tab-rotaciones,
+  body.print-informe #tab-historial { display: none !important; }
+  body.print-informe #tab-informe { display: block !important; }
+  body.print-informe #btn-imprimir-informe { display: none !important; }
+  body.print-informe { background: #fff !important; color: #000 !important; }
+  body.print-informe #main { padding: 4px !important; max-width: 100% !important; }
+  body.print-informe .section { background: #fff !important; border: none !important; padding: 0 !important; }
+  body.print-informe .section-title { color: #333 !important; border-bottom-color: #ccc !important; font-size: 13px !important; margin-bottom: 10px !important; }
+  body.print-informe #informe-table { max-height: none !important; overflow: visible !important; }
+  body.print-informe .resumen-table { font-size: 11px !important; }
+  body.print-informe .resumen-table th { background: #f0f0f0 !important; color: #333 !important; border-bottom: 2px solid #999 !important; position: static !important; }
+  body.print-informe .resumen-table td { border-bottom-color: #ddd !important; }
+  body.print-informe .resumen-table td:first-child { background: #fafafa !important; color: #000 !important; font-weight: 600 !important; position: static !important; }
+  body.print-informe .resumen-count { color: #000 !important; font-weight: 700 !important; }
+  body.print-informe .resumen-count.zero { color: #bbb !important; font-weight: 400 !important; }
 }
 
 /* BANNER PENDIENTE */

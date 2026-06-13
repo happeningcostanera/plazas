@@ -254,7 +254,9 @@
     <!-- INFORME -->
     <div id="tab-informe" class="tab-content">
       <div class="section">
-        <div class="section-title">📊 Balance 30 — últimos 30 días</div>
+        <div class="section-title">📊 Balance 30 — últimos 30 días
+          <button class="btn btn-ghost" id="btn-imprimir-informe" onclick="imprimirInforme()" style="font-size:11px">🖨 Imprimir</button>
+        </div>
         <div id="informe-empty" class="empty" style="display:none">No hay datos en los últimos 30 días.</div>
         <div id="informe-table" style="overflow:auto;max-height:70vh"></div>
       </div>
