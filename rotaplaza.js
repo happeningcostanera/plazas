@@ -1646,7 +1646,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
   let ultimaRotacionId=null;
 
+  // Guarda contra el doble submit: confirmarRotacion tiene awaits adentro y nada deshabilita
+  // el botón mientras corre. El 10/08/2026 dos clicks separados por un segundo dejaron dos
+  // tandas, porque la segunda leyó el historial antes de que la primera terminara de escribir.
+  let confirmandoRotacion=false;
   window.confirmarRotacion = async function() {
+    if(confirmandoRotacion) return;
+    confirmandoRotacion=true;
+    try { await ejecutarConfirmarRotacion(); }
+    finally { confirmandoRotacion=false; }
+  };
+
+  async function ejecutarConfirmarRotacion() {
     // Reconstruir historial desde las asignaciones actuales (refleja cualquier cambio manual)
     const slots=getSlots();
     const slotsLibres=slots.filter(sl=>!asignaciones[sl.slotId]);
@@ -1685,9 +1696,21 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 
     // Borrar registros del período actual del turno para garantizar una sola rotación por día×turno
     // Mañana: desde 00:00 | Noche: desde 17:00 (inicio del turno)
+    // La noche cruza la medianoche: antes de las 17:00 el período en curso arrancó ayer.
+    // Sin esto, confirmar de madrugada calculaba un periodoInicio futuro, no borraba nada
+    // y duplicaba la rotación (pasó el 06/05, el 20/05 y el 30/07 de 2026).
     const periodoInicio=new Date(ahora);
+    if(turno==="noche" && periodoInicio.getHours()<17) periodoInicio.setDate(periodoInicio.getDate()-1);
     periodoInicio.setHours(turno==="noche"?17:0, 0, 0, 0);
-    const oldSnap = await getDocs(query(histCol, where("ts",">=",periodoInicio.getTime())));
+    // getDocsFromServer y no getDocs: sin conexión getDocs devuelve vacío en vez de fallar,
+    // y escribir la tanda nueva sin borrar la anterior es justamente lo que duplica.
+    let oldSnap;
+    try {
+      oldSnap = await getDocsFromServer(query(histCol, where("ts",">=",periodoInicio.getTime())));
+    } catch(e) {
+      alert("Sin conexión: no se puede confirmar la rotación en este momento. Reintentar con señal.");
+      return;
+    }
     const batch=writeBatch(db);
     oldSnap.docs.forEach(d=>batch.delete(d.ref));
 
@@ -1706,8 +1729,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const hoy=new Date(ahora);
     let editableHasta;
     if(turno==="noche"){
-      const medianoche=new Date(hoy); medianoche.setHours(23,59,59,999);
-      editableHasta=medianoche.getTime();
+      // 02:00 del día siguiente al inicio del período, alineado con fueraDeHorario() y con el
+      // manual. Se deriva de periodoInicio para que el límite y el borrado no se desincronicen.
+      const limite=new Date(periodoInicio);
+      limite.setDate(limite.getDate()+1);
+      limite.setHours(2,0,0,0);
+      editableHasta=limite.getTime();
     } else {
       const limite=new Date(hoy); limite.setHours(17,0,0,0);
       editableHasta=limite.getTime();
