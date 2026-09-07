@@ -1959,9 +1959,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.agregarSectorBar = async function() {
     const inp=document.getElementById("nuevo-sector-bar");
     const nombre=inp.value.trim(); if(!nombre) return;
-    const snap=await getDocs(sectoresBarCol);
-    const maxOrden=snap.docs.reduce((m,d)=>Math.max(m,d.data().orden||0),0);
-    await addDoc(sectoresBarCol,{nombre,[dispKey]:true,orden:maxOrden+1,subsectores:[]});
+    const maxOrden=sectoresBar.length>0?Math.max(...sectoresBar.map(s=>s.orden??0))+1:0;
+    await addDoc(sectoresBarCol,{nombre,[dispKey]:true,orden:maxOrden,subsectores:[]});
     inp.value="";
   };
 
@@ -2224,9 +2223,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.agregarSectorPeon = async function() {
     const inp=document.getElementById("nuevo-sector-peon");
     const nombre=inp.value.trim(); if(!nombre) return;
-    const snap=await getDocs(sectoresPeonCol);
-    const maxOrden=snap.docs.reduce((m,d)=>Math.max(m,d.data().orden||0),0);
-    await addDoc(sectoresPeonCol,{nombre,[dispKey]:true,orden:maxOrden+1});
+    const maxOrden=sectoresPeon.length>0?Math.max(...sectoresPeon.map(s=>s.orden??0))+1:0;
+    await addDoc(sectoresPeonCol,{nombre,[dispKey]:true,orden:maxOrden});
     inp.value="";
   };
 
