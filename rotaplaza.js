@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
     getFirestore, collection, doc, onSnapshot,
-    setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs, getDoc, where
+    setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch, getDocs, getDocsFromServer, getDoc, where
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { firebaseConfig } from "./config.js";
@@ -178,8 +178,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   });
 
   async function seedIfEmpty() {
-    const snap=await getDocs(mozosCol);
-    if(!snap.empty) return;
+    // getDocsFromServer y no getDocs: sin conexion getDocs resuelve contra el cache
+    // en memoria (vacio al arrancar) y devuelve un snapshot vacio en vez de fallar,
+    // con lo que el seed reescribia la base ya cargada. Paso el 19/07 y el 06/09 de 2026.
+    let snap, secSnap;
+    try {
+      snap=await getDocsFromServer(mozosCol);
+      secSnap=await getDocsFromServer(sectoresCol);
+    } catch(e) { return; }
+    if(!snap.empty || !secSnap.empty) return;
     const batch=writeBatch(db);
     [["Carlos","👨‍🍳"],["Laura","👩‍🍳"],["Martín","👨‍🍳"],["Sofía","👩‍🍳"],["Diego","👨‍🍳"],["Ana","👩‍🍳"]]
       .forEach(([nombre,emoji])=>batch.set(doc(mozosCol),{nombre,emoji,[dispKey]:true,restricciones:[]}));
