@@ -1700,7 +1700,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     // Sin esto, confirmar de madrugada calculaba un periodoInicio futuro, no borraba nada
     // y duplicaba la rotación (pasó el 06/05, el 20/05 y el 30/07 de 2026).
     const periodoInicio=new Date(ahora);
-    if(turno==="noche" && periodoInicio.getHours()<17) periodoInicio.setDate(periodoInicio.getDate()-1);
+    // <2 y no <17: el turno noche corre de 17:00 a 02:00 (ver fueraDeHorario). Entre las
+    // 02:00 y las 17:00 no hay período en curso, y retroceder un día ahí borraría la rotación
+    // de anoche — en plazasgr hay 10 confirmaciones de noche hechas a las 11:00 de la mañana.
+    if(turno==="noche" && periodoInicio.getHours()<2) periodoInicio.setDate(periodoInicio.getDate()-1);
     periodoInicio.setHours(turno==="noche"?17:0, 0, 0, 0);
     // getDocsFromServer y no getDocs: sin conexión getDocs devuelve vacío en vez de fallar,
     // y escribir la tanda nueva sin borrar la anterior es justamente lo que duplica.
