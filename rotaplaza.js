@@ -1925,6 +1925,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     setTimeout(()=>document.getElementById("edit-nombre").focus(),100);
   };
   window.cerrarEdicion = function() { document.getElementById("edit-overlay").classList.remove("show"); editCtx=null; };
+  // Renombrar un sector arrastra el nombre guardado en el historial de los DOS turnos:
+  // los sectores son compartidos y histCol apunta solo al turno actual. En lotes de 400
+  // porque un writeBatch admite 500 operaciones y PB Fondo/PB Frente superan ese limite
+  // por turno, con lo que el commit fallaba entero y dejaba el modal abierto.
+  async function renombrarSectorEnHistorial(nombreViejo,nombre) {
+    for(const t of TURNOS_VALIDOS){
+      let snap;
+      try {
+        snap=await getDocsFromServer(query(collection(db,"historial_"+t),where("sector","==",nombreViejo)));
+      } catch(e) {
+        alert("Sin conexion: el sector se renombro, pero el historial quedo con el nombre anterior.");
+        return;
+      }
+      for(let i=0;i<snap.docs.length;i+=400){
+        const batch=writeBatch(db);
+        snap.docs.slice(i,i+400).forEach(d=>batch.set(d.ref,{sector:nombre},{merge:true}));
+        await batch.commit();
+      }
+    }
+  }
+
   window.guardarEdicion = async function() {
     const nombre=document.getElementById("edit-nombre").value.trim();
     if(!nombre||!editCtx) return;
@@ -1935,7 +1956,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     } else if(tipo==="sector"){
       const nombreViejo=sectores.find(s=>s.id===id)?.nombre;
       await setDoc(doc(sectoresCol,id),{nombre,descripcion:desc},{merge:true});
-      if(nombreViejo&&nombreViejo!==nombre){const snap=await getDocs(histCol);const batch=writeBatch(db);snap.docs.forEach(d=>{if(d.data().sector===nombreViejo)batch.set(d.ref,{sector:nombre},{merge:true});});await batch.commit();}
+      if(nombreViejo&&nombreViejo!==nombre) await renombrarSectorEnHistorial(nombreViejo,nombre);
     } else if(tipo==="subsector"){
       const s=sectores.find(s=>s.id===id);
       const subs=[...(s.subsectores||[])];
