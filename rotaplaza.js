@@ -717,11 +717,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     document.getElementById("mozos-list").innerHTML=[...mozos].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(m=>{
       const allSlots=getSlots(false);
       const huerfanas=(m.restricciones||[]).filter(slotId=>!allSlots.find(s=>s.slotId===slotId));
-      if(huerfanas.length>0) setDoc(doc(mozosCol,m.id),{restricciones:(m.restricciones||[]).filter(r=>!huerfanas.includes(r))},{merge:true});
-      if(m.plazaFija&&!allSlots.find(s=>s.slotId===m.plazaFija)) setDoc(doc(mozosCol,m.id),{plazaFija:null},{merge:true});
-      const fijaTag=m.plazaFija?(()=>{
-        const sl=allSlots.find(s=>s.slotId===m.plazaFija);
-        const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):m.plazaFija;
+      // Solo se ocultan: los sectores pueden no haber llegado todavía del snapshot.
+      // La limpieza en la base la hacen eliminarSector/eliminarSubsector.
+      const fijaSlot=m.plazaFija?allSlots.find(s=>s.slotId===m.plazaFija):null;
+      const fijaTag=fijaSlot?(()=>{
+        const sl=fijaSlot;
+        const label=sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre;
         return `<span class="rest-tag" style="border-color:var(--gold);color:var(--gold2)">📌 ${label} <button onclick="setPlazaFija('${m.id}',null)">×</button></span>`;
       })():"";
       const largoTag=m.largo?`<span class="rest-tag" style="border-color:#e06050;color:#f08070"><b>L</b> Largo <button onclick="toggleLargo('${m.id}',false)">×</button></span>`:"";
@@ -2144,10 +2145,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const batch=writeBatch(db);
     batch.delete(doc(sectoresCol,id));
     subs.forEach(ss=>batch.delete(doc(asigCol,id+"___"+ss.id)));
-    // Limpiar restricciones de mozos
+    // Limpiar restricciones y plaza fija de mozos
     mozos.forEach(m=>{
       const rests=(m.restricciones||[]).filter(r=>!r.startsWith(id+"___"));
-      if(rests.length!==(m.restricciones||[]).length) batch.set(doc(mozosCol,m.id),{restricciones:rests},{merge:true});
+      const upd={};
+      if(rests.length!==(m.restricciones||[]).length) upd.restricciones=rests;
+      if(m.plazaFija&&m.plazaFija.startsWith(id+"___")) upd.plazaFija=null;
+      if(Object.keys(upd).length>0) batch.set(doc(mozosCol,m.id),upd,{merge:true});
     });
     await batch.commit();
   };
@@ -2179,7 +2183,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const batch=writeBatch(db);
     batch.set(doc(sectoresCol,sectorId),{subsectores:subs},{merge:true});
     batch.delete(doc(asigCol,slotId));
-    mozos.forEach(m=>{const rests=(m.restricciones||[]).filter(r=>r!==slotId);if(rests.length!==(m.restricciones||[]).length)batch.set(doc(mozosCol,m.id),{restricciones:rests},{merge:true});});
+    mozos.forEach(m=>{
+      const rests=(m.restricciones||[]).filter(r=>r!==slotId);
+      const upd={};
+      if(rests.length!==(m.restricciones||[]).length) upd.restricciones=rests;
+      if(m.plazaFija===slotId) upd.plazaFija=null;
+      if(Object.keys(upd).length>0) batch.set(doc(mozosCol,m.id),upd,{merge:true});
+    });
     await batch.commit();
   };
 
