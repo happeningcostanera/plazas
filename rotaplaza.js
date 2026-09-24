@@ -32,6 +32,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   // Campo de disponibilidad por turno (fallback a "disponible" para datos existentes)
   const dispKey = turnoValido ? "disponible_" + turno : "disponible";
   function isDisp(item) { return dispKey in item ? !!item[dispKey] : !!item.disponible; }
+  // Restricciones por turno (fallback a "restricciones", compartidas por ambos turnos antes de la separación)
+  const restKey = turnoValido ? "restricciones_" + turno : "restricciones";
+  const REST_KEYS = ["restricciones","restricciones_manana","restricciones_noche"];
+  function getRest(m) { return (restKey in m ? m[restKey] : m.restricciones) || []; }
+  // Quita slots de las restricciones de todos los turnos (para eliminar sectores/subsectores)
+  function limpiarRestTodos(m,quitar,upd) {
+    REST_KEYS.forEach(k=>{
+      if(!Array.isArray(m[k])) return;
+      const rests=m[k].filter(r=>!quitar(r));
+      if(rests.length!==m[k].length) upd[k]=rests;
+    });
+  }
 
   // Colecciones compartidas (personal y sectores)
   const mozosCol    = collection(db,"mozos");
@@ -329,7 +341,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const el=document.getElementById("pasos-previos");
     if(!el) return;
     const mDisp=mozos.filter(m=>isDisp(m));
-    const conRestr=mDisp.filter(m=>(m.restricciones||[]).length>0);
+    const conRestr=mDisp.filter(m=>getRest(m).length>0);
     const conFija=mDisp.filter(m=>m.plazaFija);
     const slots=getSlots();
     const slotIdsNormales=slots.map(s=>s.slotId);
@@ -429,7 +441,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const el=document.getElementById("aviso-global");
     const slots=getSlots();
     const mozosLibres=mozos.filter(m=>isDisp(m)&&!Object.values(asignaciones).some(a=>a.mozoId===m.id));
-    const conflictos=slots.filter(sl=>!asignaciones[sl.slotId]&&mozosLibres.length>0&&mozosLibres.every(m=>(m.restricciones||[]).includes(sl.slotId)));
+    const conflictos=slots.filter(sl=>!asignaciones[sl.slotId]&&mozosLibres.length>0&&mozosLibres.every(m=>getRest(m).includes(sl.slotId)));
     if(conflictos.length>0) {
       const nombres=conflictos.map(sl=>sl.ssNombre||sl.sectorNombre).join(", ");
       el.innerHTML=`<div class="aviso error"><strong>⛔ Conflicto de restricciones</strong>Ningún mozo puede ir a: <strong>${nombres}</strong>.</div>`;
@@ -716,7 +728,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   function renderPersonal() {
     document.getElementById("mozos-list").innerHTML=[...mozos].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(m=>{
       const allSlots=getSlots(false);
-      const huerfanas=(m.restricciones||[]).filter(slotId=>!allSlots.find(s=>s.slotId===slotId));
+      const huerfanas=getRest(m).filter(slotId=>!allSlots.find(s=>s.slotId===slotId));
       // Solo se ocultan: los sectores pueden no haber llegado todavía del snapshot.
       // La limpieza en la base la hacen eliminarSector/eliminarSubsector.
       const fijaSlot=m.plazaFija?allSlots.find(s=>s.slotId===m.plazaFija):null;
@@ -726,7 +738,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         return `<span class="rest-tag" style="border-color:var(--gold);color:var(--gold2)">📌 ${label} <button onclick="setPlazaFija('${m.id}',null)">×</button></span>`;
       })():"";
       const largoTag=m.largo?`<span class="rest-tag" style="border-color:#e06050;color:#f08070"><b>L</b> Largo <button onclick="toggleLargo('${m.id}',false)">×</button></span>`:"";
-      const restTags=(m.restricciones||[]).filter(slotId=>!huerfanas.includes(slotId)).map(slotId=>{
+      const restTags=getRest(m).filter(slotId=>!huerfanas.includes(slotId)).map(slotId=>{
         const sl=allSlots.find(s=>s.slotId===slotId);
         const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):slotId;
         return `<span class="rest-tag">🚫 ${label} <button onclick="quitarRestriccion('${m.id}','${slotId}')">×</button></span>`;
@@ -1368,7 +1380,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       if(mozosPreAsignados.has(m.id)) return;
       if(slotsPreAsignados.has(m.plazaFija)) return;
       if(!slots.find(sl=>sl.slotId===m.plazaFija)) return;
-      if((m.restricciones||[]).includes(m.plazaFija)) return;
+      if(getRest(m).includes(m.plazaFija)) return;
       slotsPreAsignados.add(m.plazaFija);
       mozosPreAsignados.add(m.id);
       fijaAsignaciones[m.plazaFija]={mozoId:m.id,desde:Date.now()};
@@ -1523,7 +1535,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
           if(li>=NL||si>=NS) return 0; // dummy
           const largo=largosDisp[li];
           const {sectorId,slotsDelSector}=sectoresCandidatos[si];
-          const slotsValidos=slotsDelSector.filter(sl=>!(largo.restricciones||[]).includes(sl.slotId));
+          const slotsValidos=slotsDelSector.filter(sl=>!getRest(largo).includes(sl.slotId));
           if(slotsValidos.length===0) return INF;
           const vecesSector=slotsDelSector.reduce((sum,sl)=>sum+(conteo[largo.id]?.[sl.slotId]||0),0);
           const dist=distanciaGrupo(largo.id,sectorId);
@@ -1542,7 +1554,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
         const largo=largosDisp[largoIdx];
         const {slotsDelSector}=sectoresCandidatos[sectorIdx];
         if(costLargos[largoIdx][sectorIdx]>=INF) return;
-        const slotsValidos2=slotsDelSector.filter(sl=>!(largo.restricciones||[]).includes(sl.slotId));
+        const slotsValidos2=slotsDelSector.filter(sl=>!getRest(largo).includes(sl.slotId));
         const slotsPreferidos=slotsValidos2.filter(sl=>sl.slotId!==ultimoSlotPorMozo[largo.id]);
         const pool=slotsPreferidos.length>0?slotsPreferidos:slotsValidos2;
         const slotCandidato=pool.reduce((best,sl)=>(conteo[largo.id]?.[sl.slotId]||0)<(conteo[largo.id]?.[best.slotId]||0)?sl:best);
@@ -1582,7 +1594,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const mozosCirular = Array.from({length:n}, (_,mi) => mozosLibres[(idx+mi)%n]);
       const costMatrix = mozosCirular.map((mozo,mi) =>
         slotsLibres.map(slot => {
-          if((mozo.restricciones||[]).includes(slot.slotId)) return INF;
+          if(getRest(mozo).includes(slot.slotId)) return INF;
           const dist=distanciaGrupo(mozo.id,slot.sectorId);
           const penUltimoSlot=(ultimoSlotPorMozo[mozo.id]===slot.slotId)?1:0;
           const penRepetir=penEvitarRepetir(mozo.id,slot.sectorId);
@@ -1795,7 +1807,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const opc=document.getElementById("popup-opciones");
     if(libres.length===0) opc.innerHTML=`<div class="empty">No hay mozos libres.</div>`;
     else opc.innerHTML=libres.map(m=>{
-      const rest=(m.restricciones||[]).includes(slotId);
+      const rest=getRest(m).includes(slotId);
       return `<div class="mozo-option ${rest?"restringido":""}" onclick="${rest?`asignarExcepcion('${m.id}')`:`asignarManual('${m.id}')`}">
         <span class="emoji">${m.emoji}</span><span class="mname">${m.nombre}</span>
         ${rest?`<span class="rest-label">🚫 restringido</span>`:""}
@@ -1862,7 +1874,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     if(slots.length===0){opc.innerHTML=`<div class="empty">No hay slots activos.</div>`;return;}
     opc.innerHTML=slots.map(sl=>{
       const label=sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre;
-      const rest=(mozo.restricciones||[]).includes(sl.slotId);
+      const rest=getRest(mozo).includes(sl.slotId);
       return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--bg);border:1px solid ${rest?"var(--orange)":"var(--border)"};margin-bottom:6px">
         <span style="flex:1;font-size:12px;color:${rest?"#e8903a":"var(--text)"}">${label}</span>
         <button class="btn ${rest?"btn-orange":"btn-ghost"}" onclick="toggleRestriccion('${mozoId}','${sl.slotId}')">${rest?"Quitar":"Agregar"}</button>
@@ -1873,14 +1885,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window.cerrarRestricciones = function() { document.getElementById("rest-overlay").classList.remove("show"); restMozoId=null; };
   window.toggleRestriccion = async function(mozoId,slotId) {
     const mozo=mozos.find(m=>m.id===mozoId);
-    let rests=[...(mozo.restricciones||[])];
+    let rests=[...getRest(mozo)];
     rests=rests.includes(slotId)?rests.filter(r=>r!==slotId):[...rests,slotId];
-    await setDoc(doc(mozosCol,mozoId),{restricciones:rests},{merge:true});
+    await setDoc(doc(mozosCol,mozoId),{[restKey]:rests},{merge:true});
     setTimeout(()=>abrirRestricciones(mozoId),50);
   };
   window.quitarRestriccion = async function(mozoId,slotId) {
     const mozo=mozos.find(m=>m.id===mozoId);
-    await setDoc(doc(mozosCol,mozoId),{restricciones:(mozo.restricciones||[]).filter(r=>r!==slotId)},{merge:true});
+    await setDoc(doc(mozosCol,mozoId),{[restKey]:getRest(mozo).filter(r=>r!==slotId)},{merge:true});
   };
 
   // ===================== PLAZA FIJA =====================
@@ -2147,9 +2159,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     subs.forEach(ss=>batch.delete(doc(asigCol,id+"___"+ss.id)));
     // Limpiar restricciones y plaza fija de mozos
     mozos.forEach(m=>{
-      const rests=(m.restricciones||[]).filter(r=>!r.startsWith(id+"___"));
       const upd={};
-      if(rests.length!==(m.restricciones||[]).length) upd.restricciones=rests;
+      limpiarRestTodos(m,r=>r.startsWith(id+"___"),upd);
       if(m.plazaFija&&m.plazaFija.startsWith(id+"___")) upd.plazaFija=null;
       if(Object.keys(upd).length>0) batch.set(doc(mozosCol,m.id),upd,{merge:true});
     });
@@ -2184,9 +2195,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     batch.set(doc(sectoresCol,sectorId),{subsectores:subs},{merge:true});
     batch.delete(doc(asigCol,slotId));
     mozos.forEach(m=>{
-      const rests=(m.restricciones||[]).filter(r=>r!==slotId);
       const upd={};
-      if(rests.length!==(m.restricciones||[]).length) upd.restricciones=rests;
+      limpiarRestTodos(m,r=>r===slotId,upd);
       if(m.plazaFija===slotId) upd.plazaFija=null;
       if(Object.keys(upd).length>0) batch.set(doc(mozosCol,m.id),upd,{merge:true});
     });
