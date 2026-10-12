@@ -84,8 +84,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       ultimaRotacionNotas=snap.data().notas||{};
       const d=snap.data();
       if(d.rotacionId){
-        // Siempre bloquear si hay rotación confirmada (oculta botones Liberar)
-        formacionBloqueada=true;
+        // Bloquear mientras la rotación confirmada siga vigente (oculta botones Liberar).
+        // Vencida editableHasta, el período terminó: se puede generar una nueva.
+        formacionBloqueada=!d.editableHasta || Date.now()<d.editableHasta;
         // Restaurar estado editable solo si el horario no venció
         if(d.editableHasta && Date.now()<d.editableHasta && !ultimaRotacionId){
           ultimaRotacionId=d.rotacionId;
