@@ -218,10 +218,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   function getSlots(soloActivos=true) {
     const slots=[];
     (soloActivos?sectores.filter(s=>isDisp(s)):sectores).forEach(s=>{
-      const subs=soloActivos?(s.subsectores||[]).filter(ss=>isDisp(ss)):(s.subsectores||[]);
-      subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss["nombre_"+turno]||ss.nombre}));
+      const todas=s.subsectores||[];
+      const subs=soloActivos?todas.filter(ss=>isDisp(ss)):todas;
+      // ssPos: posición en la lista completa del sector (igual en ambos turnos), para distinguir homónimos
+      subs.forEach(ss=>slots.push({slotId:s.id+"___"+ss.id,sectorId:s.id,ssId:ss.id,sectorNombre:s.nombre,ssNombre:ss["nombre_"+turno]||ss.nombre,ssPos:todas.indexOf(ss)+1}));
     });
     return slots;
+  }
+
+  // "Sector › ① Subsector": el número de posición se muestra aparte del nombre (solo en pantallas de configuración)
+  function slotLabelHtml(sl) {
+    if(!sl.ssNombre) return sl.sectorNombre;
+    return `${sl.sectorNombre} › <span class="ss-num" title="Posición ${sl.ssPos} en la lista de ${sl.sectorNombre} (igual en mañana y noche)">${sl.ssPos}</span>${sl.ssNombre}`;
   }
 
   function getSlotsBar() {
@@ -735,13 +743,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const fijaSlot=m.plazaFija?allSlots.find(s=>s.slotId===m.plazaFija):null;
       const fijaTag=fijaSlot?(()=>{
         const sl=fijaSlot;
-        const label=sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre;
-        return `<span class="rest-tag" style="border-color:var(--gold);color:var(--gold2)">📌 ${label} <button onclick="setPlazaFija('${m.id}',null)">×</button></span>`;
+        const label=slotLabelHtml(sl);
+        const inactiva=!getSlots().some(s=>s.slotId===sl.slotId);
+        return `<span class="rest-tag" style="border-color:${inactiva?"var(--orange)":"var(--gold)"};color:${inactiva?"#e8903a":"var(--gold2)"}">📌 ${label}${inactiva?" ⚠️ inactiva en este turno, no se aplica":""} <button onclick="setPlazaFija('${m.id}',null)">×</button></span>`;
       })():"";
       const largoTag=m.largo?`<span class="rest-tag" style="border-color:#e06050;color:#f08070"><b>L</b> Largo <button onclick="toggleLargo('${m.id}',false)">×</button></span>`:"";
       const restTags=getRest(m).filter(slotId=>!huerfanas.includes(slotId)).map(slotId=>{
         const sl=allSlots.find(s=>s.slotId===slotId);
-        const label=sl?(sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre):slotId;
+        const label=sl?slotLabelHtml(sl):slotId;
         return `<span class="rest-tag">🚫 ${label} <button onclick="quitarRestriccion('${m.id}','${slotId}')">×</button></span>`;
       }).join("");
       return `<div class="person-row">
@@ -802,6 +811,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       const canAdd=subs.length<MAX_SS_PER_SECTOR;
       const subsHtml=subs.map((ss,i)=>`
         <div class="ss-cfg-row" style="flex-wrap:wrap">
+          <span class="ss-num" title="Posición ${i+1} (igual en mañana y noche)">${i+1}</span>
           <span class="ss-cfg-name ${isDisp(ss)?"":"off"}" style="min-width:80px">${ss["nombre_"+turno]||ss.nombre}</span>
           ${ss.descripcion?`<span style="font-size:10px;color:var(--text3);flex:1;font-style:italic">${ss.descripcion}</span>`:""}
           <button class="btn btn-ghost" onclick="abrirEdicion('subsector','${s.id}',${i})">✏️</button>
@@ -1874,7 +1884,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     const opc=document.getElementById("rest-opciones");
     if(slots.length===0){opc.innerHTML=`<div class="empty">No hay slots activos.</div>`;return;}
     opc.innerHTML=slots.map(sl=>{
-      const label=sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre;
+      const label=slotLabelHtml(sl);
       const rest=getRest(mozo).includes(sl.slotId);
       return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--bg);border:1px solid ${rest?"var(--orange)":"var(--border)"};margin-bottom:6px">
         <span style="flex:1;font-size:12px;color:${rest?"#e8903a":"var(--text)"}">${label}</span>
@@ -1901,6 +1911,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
     fijaMozoId=mozoId;
     const mozo=mozos.find(m=>m.id===mozoId);
     const slots=getSlots(false);
+    // Los inactivos en este turno no se pueden aplicar al generar: se marcan para no confundirlos con el activo homónimo
+    const activos=new Set(getSlots().map(s=>s.slotId));
     document.getElementById("fija-title").textContent="📌 "+mozo.nombre;
     const opc=document.getElementById("fija-opciones");
     if(slots.length===0){opc.innerHTML=`<div class="empty">No hay slots.</div>`;return;}
@@ -1908,7 +1920,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
       <span style="flex:1;font-size:12px;color:var(--text)">— Sin plaza fija —</span>
       <button class="btn ${!mozo.plazaFija?"btn-gold":"btn-ghost"}" onclick="setPlazaFija('${mozoId}',null)">${!mozo.plazaFija?"✓ Actual":"Quitar"}</button>
     </div>`+slots.map(sl=>{
-      const label=sl.ssNombre?`${sl.sectorNombre} › ${sl.ssNombre}`:sl.sectorNombre;
+      const label=slotLabelHtml(sl)+(activos.has(sl.slotId)?"":" ⛔ inactivo en este turno");
       const selected=mozo.plazaFija===sl.slotId;
       return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--bg);border:1px solid ${selected?"var(--gold)":"var(--border)"};margin-bottom:6px">
         <span style="flex:1;font-size:12px;color:${selected?"var(--gold2)":"var(--text)"}">${label}</span>

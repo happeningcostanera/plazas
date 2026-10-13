@@ -94,6 +94,8 @@ input[type=text]:focus{border-color:var(--gold)}
 .sector-cfg-name.off{color:var(--text3);text-decoration:line-through}
 .ss-cfg-list{padding-left:12px;border-left:2px solid var(--border2);margin-top:8px;display:flex;flex-direction:column;gap:6px}
 .ss-cfg-row{display:flex;align-items:center;gap:6px}
+/* Número de posición del subsector (círculo): identifica la fila, no es parte del nombre */
+.ss-num{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:18px;height:18px;padding:0 4px;margin-right:6px;border:1px solid var(--text3);border-radius:9px;font-size:10px;font-weight:600;line-height:1;color:var(--text2);background:rgba(255,255,255,.04);vertical-align:middle;flex-shrink:0}
 .ss-cfg-name{font-size:12px;flex:1}
 .ss-cfg-name.off{color:var(--text3);text-decoration:line-through}
 .add-ss-row{display:flex;gap:6px;margin-top:8px;padding-left:12px}
